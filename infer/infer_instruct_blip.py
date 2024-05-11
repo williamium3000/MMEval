@@ -63,11 +63,11 @@ if __name__ == "__main__":
     for sample in tqdm.tqdm(samples):
         q = sample["question"]
         image_file = os.path.join(args.img_dir, sample["image"])
-        ouput = eval_model(processor, model, image_file, q)
+        output = eval_model(processor, model, image_file, q)
         
         output = output.strip().replace(".", '').lower()
         sample["output"] = output
-        
+    os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
     json.dump(samples, open(args.outfile, "w"), indent=4)
             
 

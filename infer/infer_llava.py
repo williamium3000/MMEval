@@ -184,7 +184,7 @@ if __name__ == "__main__":
                             })())
         output = output.strip().replace(".", '').lower()
         sample["output"] = output
-        
+    os.makedirs(os.path.dirname(args.outfile), exist_ok=True) 
     json.dump(samples, open(args.outfile, "w"), indent=4)
             
 

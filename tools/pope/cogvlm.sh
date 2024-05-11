@@ -11,11 +11,12 @@
 
 mkdir -p slurm_logs
 
-OUTFILE=eval/pope/results/instructblip-vicuna-7b/coco_pope_adversarial_result.json
-python infer/infer_instruct_blip.py \
+OUTFILE=eval/pope/results/cogagent-chat-hf/coco_pope_adversarial_result.json
+
+python infer/infer_cogvlm.py \
     --infile eval/pope/coco_pope_adversarial_converted.json \
     --outfile $OUTFILE \
     --img_dir data/coco/ \
-    --model_path Salesforce/instructblip-vicuna-7b \
+    --from_pretrained THUDM/cogagent-chat-hf \
 
 python eval/pope/eval.py $OUTFILE $OUTFILE 

@@ -161,3 +161,5 @@ cython_debug/
 
 eval
 data
+slurm_logs
+LLaVA
