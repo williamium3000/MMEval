@@ -138,18 +138,20 @@ if __name__ == "__main__":
     parser.add_argument('--infile', type=str, required=True)
     parser.add_argument('--outfile', type=str, required=True)
     parser.add_argument('--img_dir', type=str, required=True)
-    parser.add_argument('--model_path', type=str, default="liuhaotian/llava-v1.5-13b",
-                        choices=[
-                            "liuhaotian/llava-v1.6-34b", "liuhaotian/llava-v1.5-13b",
-                            "liuhaotian/llava-v1.5-7b", "liuhaotian/llava-v1.6-mistral-7b",
-                            "liuhaotian/llava-v1.6-vicuna-13b", "liuhaotian/llava-v1.6-vicuna-7b"
-                            ])
+    parser.add_argument('--model_base', type=str, default=None)
+    parser.add_argument('--model_path', type=str, default="liuhaotian/llava-v1.5-13b")
+    # choices=[
+    #     "liuhaotian/llava-v1.6-34b", "liuhaotian/llava-v1.5-13b",
+    #     "liuhaotian/llava-v1.5-7b", "liuhaotian/llava-v1.6-mistral-7b",
+    #     "liuhaotian/llava-v1.6-vicuna-13b", "liuhaotian/llava-v1.6-vicuna-7b"
+    #                         ]
+    
     args = parser.parse_args()
 
     model_path = args.model_path
     model_name = get_model_name_from_path(args.model_path)
     tokenizer, model, image_processor, context_len = load_pretrained_model(
-            model_path, None, get_model_name_from_path(model_path)
+            model_path, args.model_base, get_model_name_from_path(model_path)
         )
     
     # format:
