@@ -160,6 +160,8 @@ cython_debug/
 #.idea/
 
 eval
-data
+data/
 slurm_logs
-LLaVA
+LLaVA/
+mplug_owl2/
+output/
