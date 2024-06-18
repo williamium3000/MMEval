@@ -40,7 +40,7 @@ def call_chatgpt(messages, model_name="gpt-4o"):
             print(e)
             time.sleep(1)
         
-    return completion.choices[0].message
+    return completion.choices[0].message.content
 
 
 
@@ -68,6 +68,7 @@ def load_coco2017(debug=False):
         all_img_ids = all_img_ids[:30]
         
     samples = []
+    print(f"loading coco2017: total {len(all_img_ids)}")
     for img_id in tqdm.tqdm(all_img_ids):
         case = load_sample_coco2017(img_id)
         samples.append(case)
