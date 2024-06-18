@@ -8,11 +8,14 @@ coco14_instance = COCO("data/coco/annotations/instances_val2014.json")
 coco14_caption = COCO("data/coco/annotations/captions_val2014.json")
 cats14 = coco14_instance.loadCats(coco14_instance.getCatIds())
 id_name_mapping14 = {cat["id"]: cat["name"] for cat in cats14}
+
 from openai import OpenAI
-import os
 from dotenv import load_dotenv
 
 load_dotenv(".env")
+
+import tqdm
+import time
 
 client = OpenAI()
 
@@ -21,11 +24,22 @@ def call_chatgpt(messages, model_name="gpt-4o"):
         #     {"role": "system", "content": "You are a helpful assistant."},
         #     {"role": "user", "content": message}
         # ]
+    while True:
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                # temperature=1,
+                # max_tokens=256,
+                # top_p=1,
+                # frequency_penalty=0,
+                # presence_penalty=0
+            )
+            break
+        except Exception as e:
+            print(e)
+            time.sleep(1)
         
-    completion = client.chat.completions.create(
-        model=model_name,
-        messages=messages
-    )
     return completion.choices[0].message
 
 
@@ -50,7 +64,15 @@ def load_sample_coco2017(img_id):
     
 def load_coco2017(debug=False):
     all_img_ids = coco17_instance.getImgIds()
-    print(all_img_ids)
+    if debug:
+        all_img_ids = all_img_ids[:30]
+        
+    samples = []
+    for img_id in tqdm.tqdm(all_img_ids):
+        case = load_sample_coco2017(img_id)
+        samples.append(case)
+    return samples
+        
 
 if __name__ == "__main__":
     load_coco2017()
