@@ -31,7 +31,7 @@ def call_chatgpt(messages, model_name="gpt-4o"):
 
 
 
-def load_coco2017(img_id):
+def load_sample_coco2017(img_id):
     img = coco17_instance.loadImgs(img_id)[0]
     
     annIds = coco17_instance.getAnnIds(imgIds=img_id, iscrowd=None)
@@ -47,4 +47,12 @@ def load_coco2017(img_id):
                 caption["caption"] for caption in caption_anns
             ]
     }
+    
+def load_coco2017(debug=False):
+    all_img_ids = coco17_instance.getImgIds()
+    print(all_img_ids)
+
+if __name__ == "__main__":
+    load_coco2017()
+
     
