@@ -1,4 +1,5 @@
-from dyna.utils import call_chatgpt, load_coco2017
+from dyna.data import load_coco2017
+from dyna.utils import call_chatgpt
 from dyna.prompt import CONVERSATION_PROMPT
 from  infer.infer_llava import load_model, eval_model
 import os

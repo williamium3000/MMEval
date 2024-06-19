@@ -1,6 +1,6 @@
 import os
 import sng_parser
-from dyna.utils import load_coco2017
+from dyna.data import load_coco2017
 
 det_list = ['a', 'the', 'an', '']
 
