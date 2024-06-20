@@ -55,3 +55,41 @@ Response needed to be evaluated:
 You MUST only respond in the format as described below. DO NOT RESPOND WITH ANYTHING ELSE.
 #Begin
 '''
+
+
+LSG_PROMPT = \
+'''
+You are an excelent scene graph parser that can parse the scene graph from language accurately.
+
+Task: You will be given a paragraph of text, describing the objects, attributes of objects and relations between objects in an image. Your task is to parse the scene graph from the texts and return a scene graph in json format.
+
+Requirements:
+1. You need parse sentence by sentence and update the scene graph step by step based on the information in the sentence.
+2. For each sentence, you should first identify the concrete objects. Then identify attributes of these objects and  the relations between objects.
+Examples of concrete objects: man, dog, tree, car, etc. Examples of non-concrete objects (abstract): atmosphere, setting, scene, etc. This is only example, you should consider beyond this and only select the concrete objects.
+Examples of attributes: color, size, shape, quantity, etc. You should consider beyond this.
+Relation between objects includes but not limited to spatial relation such as on, under, near, and interaction relation such as holding, eating, size comparison such as bigger, smaller, etc. You should consider beyond this.
+3. After you parse the objects, attributes and relation in one sentence, you should update the scene graph following the rules:
+- for each object, you should first determin whether this object already exists in the scene graph or not using contexts, attributes of this object and its relation with other objects. If it exists, you should update the attributes and relations of this object. If it does not exist, you should add this object to the scene graph. You should particularly notice different instances of the same class.
+- for each attribute, you should determin whether the subject already exists in the scene graph or not. If it exists, you should update the attribute. If it does not exist, you should first add the obejct and this attribute to the scene graph.
+- for each relation, you should first determine the subject and object exists in the scene graph or not. If they exist, you should update the relation. If they do not exist, you should first add the subject and object to the scene graph, then the relation.
+4. You should follow the above steps and parse sentence-by-sentence, and update the scene graph step by step.
+
+Format: You should return the scene graph in json format, listing objects, attributes, and relations.
+{{
+    "entities": [
+        {{"name": <name of the entity>, "attributes": <attributes of the entity>}},
+        ...
+    ],
+    "relations": [
+        {{"subject": <subject of the relation>, "relation": <relation>, "object": <object of the relation>}},
+        ...
+    ]
+}}
+
+Provided text to be parsed:
+{}
+
+Please think step by step but MAKE SURE to output the result in the given FORMAT.
+#Begin
+'''
