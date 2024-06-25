@@ -23,21 +23,32 @@ Please respond as if you are having the conversation with the vision-language mo
 
 PERSONA_PROMPT = \
 """
-Task: You are a helpful and precise prompt generator. Given the detailed information (grounding of the image), your task is to is to generate a persona with a context that will be simulated by a conversational agent to induce a vision-language model to hallucinate.
+Background: Persona and contexts heavily influence how one perceives and interacts with the image. Different persona in different contexts may lead to the person asking differnt questions or making different statements about the image.
+
+Task: Given the detailed information (grounding of the image), your task is to is to generate a persona with a context that will be simulated by a conversational agent to induce a vision-language model to hallucinate.
 This persona and context will be later to prompt a ChatGPT-like LLM to simulate a person in such context and have a causal conversation with a human regarding this image.
 
-Requirement: create a brief description of such a person with characteristic, background, and preferences and a clear goal with context.
+Requirement: 
+1. create a brief description of such a person with characteristic, background, and preferences and a clear goal with context.
+2. Your description should be short but precise (less than 50 words), only including the most representative traits of the persona and context.
+3. The created persona and context should have a objective. This object should require the persona to  query information about the image to accomplish.
 
+Format: You should generate a list of dictionaries, where each dictionary represents one persona and context. Each dictionary contains the following keys: persona, context.
+[
+    {{"persona": <persona desc with less than 50 words>, "context": <context desc>}},
+    ...
+]
 Provided ground-truth information about the image:
 {}
 
-Persona and context:
+Please generate the 5 personas and contexts. You MUST only respond in the format as described below. DO NOT RESPOND WITH ANYTHING ELSE.
+#Begin
 """
 
 CONVERSATION_PERSONA_PROMPT = \
 """
 Task: Your task is to simulate a person in context using the given persona and context information and evaluate whether a vision-language model will hallucinate (i.e. provide information contradictory to the image) on images under such context. 
-Given the detailed information (grounding of the image) and the provided persona and context, your task is to perform a series of casual conversations with the model naturally by asking questions or making statements about the image under the given context following the provided persona.
+Given the detailed information (grounding of the image) and the provided persona and context, your task is to act as the given persona under the context to perform a series of casual conversations with the model naturally by asking questions or making statements about the image.
 The conversation is multi-turn and can be open-ended and you need to ask questions based on the history of the conversations. 
 
 Requirement:
@@ -50,6 +61,14 @@ COVERAGE: the whole conversation should cover all the information provided to yo
 6. If you have asked all the questions and covered all the information about the image, you can end the conversation by outputing "END"
 Now, please start your conversation with the vision-language model.
 7. Please act as if you are having the conversation directly with the vision-language model, acting as the provided persona in the given context. And the the response from the vision-language model will be directly given to you, as if the model is also having the conversation with you.
+8. You shoul NEVER provide the ground-truth information about the image to the vision-language model being evaluted (i.e. DON'T mention any given ground-truth information actively in your question to the model).
+
+Bad example:
+Ground-truth information: The image contains traffic light or an umbrella in the street.
+You: Could you detail any other objects or environmental features in the image that might provide context to the scene, such as a traffic light or an umbrella?
+Reason: you should never mention ground-truth information such as a traffic light or an umbrella, which may give a hint to the vlm.
+
+
 
 Persona and context: 
 {}

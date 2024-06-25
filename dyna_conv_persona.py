@@ -1,12 +1,19 @@
 from dyna.data import load_coco2017
 from dyna.utils import call_chatgpt
-from dyna.prompt import CONVERSATION_PROMPT, PERSONA_PROMPT
+from dyna.prompt import CONVERSATION_PERSONA_PROMPT, PERSONA_PROMPT
 from infer.infer_llava import load_model, eval_model
 import os
 import argparse
 import json
 import tqdm
+import re
 
+
+def parse_json(text):
+    pattern = r"```json(.*)```"
+    match = re.search(pattern, text, re.DOTALL)
+    json_text = match.group(1) if match else text
+    return json.loads(json_text)
 
 def generate_persona(case):
     prompt = PERSONA_PROMPT.format(case)
@@ -14,13 +21,20 @@ def generate_persona(case):
         {"role": "system", "content": "You are a helpful conversation-based evaluator."},
         {"role": "user", "content": prompt}
     ]
-
-    persona = call_chatgpt(conversations)
+    while True:
+        try:
+            message = call_chatgpt(conversations)
+            persona = parse_json(message)
+            break
+        except Exception as e:
+            print(e)
+            continue
+    
     return persona
 
 
 def dyna_conv(persona, case):
-    prompt = CONVERSATION_PROMPT.format(persona, case)
+    prompt = CONVERSATION_PERSONA_PROMPT.format(persona, case)
     conversations = [
                     {"role": "system", "content": "You are a helpful conversation-based evaluator."},
                     {"role": "user", "content": prompt}
@@ -71,11 +85,15 @@ if __name__ == "__main__":
     model_path = args.model_path
     samples = load_coco2017(args.debug)
     
-    output_path = os.path.join(args.outdir, "conversation.json")
+    output_path = os.path.join(args.outdir, "conversation-persona.json")
     
     print("starting conversation with model...")
     for sample in tqdm.tqdm(samples):
         persona = generate_persona(sample)
+        print(persona)
+        import sys
+        sys.exit()
+        
         sample["persona"] = persona
         conv = dyna_conv(persona, sample)
         sample["conversation"] = conv
