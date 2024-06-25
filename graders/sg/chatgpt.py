@@ -7,7 +7,7 @@ import tqdm
 import re
 
 def parse_json(text):
-    pattern = r"```{(.*)}```"
+    pattern = r"```json(.*)```"
     match = re.search(pattern, text, re.DOTALL)
     json_text = match.group(1) if match else text
     return json.loads(json_text)

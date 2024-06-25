@@ -75,9 +75,11 @@ Relation between objects includes but not limited to spatial relation such as on
 - for each relation, you should first determine the subject and object exists in the scene graph or not. If they exist, you should update the relation. If they do not exist, you should first add the subject and object to the scene graph, then the relation.
 4. You should follow the above steps and parse sentence-by-sentence, and update the scene graph step by step.
 
-Format: You should return the scene graph in json format, listing objects, attributes, and relations.
+Format: You should return the scene graph in json format, listing objects with attributes, and relations. 
+Please note that instances key correspond to a list of instances. If there are two instance of the same class / object, then both should be included in the instances list.
+```json
 {{
-    "entities": [
+    "instances": [
         {{"name": <name of the entity>, "attributes": <attributes of the entity>}},
         ...
     ],
@@ -86,10 +88,12 @@ Format: You should return the scene graph in json format, listing objects, attri
         ...
     ]
 }}
+```
 
 Provided text to be parsed:
 {}
-
-Please think step by step but MAKE SURE to output the result in the given FORMAT.
+`
+Please think step by step and parse the scene graph from the text carefully.
+You MUST only respond in the format as described below. DO NOT RESPOND WITH ANYTHING ELSE.
 #Begin
 '''
