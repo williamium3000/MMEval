@@ -1,3 +1,4 @@
+import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -7,11 +8,12 @@ import time
 
 client = OpenAI()
 
+
 def call_chatgpt(messages, model_name="gpt-4o"):
     # messages = [
-        #     {"role": "system", "content": "You are a helpful assistant."},
-        #     {"role": "user", "content": message}
-        # ]
+    #     {"role": "system", "content": "You are a helpful assistant."},
+    #     {"role": "user", "content": message}
+    # ]
     while True:
         try:
             completion = client.chat.completions.create(
@@ -27,5 +29,7 @@ def call_chatgpt(messages, model_name="gpt-4o"):
         except Exception as e:
             print(e)
             time.sleep(1)
-        
+
     return completion.choices[0].message.content
+
+
