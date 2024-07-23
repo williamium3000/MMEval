@@ -48,7 +48,14 @@ def load_coco2017(debug=False):
         case = load_sample_coco2017(img_id)
         samples.append(case)
     return samples
-        
+
+
+def format_case_coco(case):
+    formatted = "\n".join(case["captions"]) + "\n"
+    instances = case["instances"]
+    for ins in instances:
+        formatted += f"{ins['category']} bbox: {ins['bbox']} size: {ins['pixel_area']}\n"
+    return formatted
 
 if __name__ == "__main__":
     load_coco2017()
