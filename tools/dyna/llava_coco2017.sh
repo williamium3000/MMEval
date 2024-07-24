@@ -11,4 +11,4 @@
 
 mkdir -p slurm_logs
 conda activate llava
-python dyna_conv.py --debug --outdir tools/dyna-certainty
+python dyna_conv.py --debug --outfile output/coco2017/dyna_uncertainty.json

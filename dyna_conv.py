@@ -55,22 +55,20 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
     parser.add_argument('--model_base', type=str, default=None)
     parser.add_argument('--model_path', type=str, default="liuhaotian/llava-v1.5-7b")
-    parser.add_argument('--outdir', type=str, default="output/coco2017")
+    parser.add_argument('--outfile', type=str)
     args = parser.parse_args()
 
-    os.makedirs(args.outdir, exist_ok=True)
+    os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
     # need to figure out how to eval on different models
     model_name, tokenizer, model, image_processor, context_len = load_model(args.model_path, args.model_base)
     model_path = args.model_path
     samples = load_coco2017(args.debug)
     
-    output_path = os.path.join(args.outdir, "conversation.json")
-    
     print("starting conversation with model...")
     for sample in tqdm.tqdm(samples):
         conv = dyna_conv(sample)
-        sample["conversation"] = conv
+        sample["conversations"] = conv
     
     
-    with open(output_path, "w") as f:
+    with open(args.outfile, "w") as f:
         json.dump(samples, f, indent=4)
