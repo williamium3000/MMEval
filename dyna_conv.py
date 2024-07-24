@@ -1,6 +1,6 @@
 from dyna.data import load_coco2017, format_case_coco
 from dyna.utils import call_chatgpt
-from dyna.promptv2 import CONV_COVERAGE_PROMPT_CERTAINTY
+from dyna.promptv2 import CONV_COVERAGE_PROMPT_CERTAINTY, CONV_COVERAGE_PROMPT
 from infer.infer_llava import load_model, eval_model
 import os
 import argparse
@@ -16,6 +16,7 @@ def dyna_conv(case):
     ]
     
     to_save = []
+    r = 0
     while True:
         message_evaluator = call_chatgpt(conversations)
         to_save.append({"role": "evaluator", "content": message_evaluator})
@@ -42,7 +43,10 @@ def dyna_conv(case):
                             })())
         output = output.lower()
         conversations.append({"role": "user", "content": output})
-        to_save.append({"role": "evaluatee", "content": copy.deepcopy(output)})
+        r += 1
+        to_save.append(
+            {"round_id": r, "prompt": message_evaluator, "response":output}
+        )
     return to_save
 
 

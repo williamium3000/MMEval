@@ -10,6 +10,7 @@ Requirements:
 3. You should make the conversation as natural as possible and act as if you are a human having conversation directly with another human.-
 4. COVERAGE: the whole conversation is expected to COVER all the information regarding the image, you should ask questions that cover as many details as possible. If the human responses fail to cover some specific object, attributes or relations in the image, you should cover this in the subsequent conversations.
 5. DO NOT DISCLOSE any given image information (captions and bboxes) directly to the human in your conversation. Also, DO NOT mention that the information source is the caption or the bounding box.
+6. Focus your conversation on the content of the image. Remember the purpose of the conversation is to assess the human's perception and knowledge of the image.
 6. You can end the conversation naturally. If you feel like the conversation is coming to an end, you can end the conversation by outputing "END" ONLY. 
 
 Image information:

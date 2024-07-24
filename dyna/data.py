@@ -28,6 +28,7 @@ def load_sample_coco2017(img_id):
     caption_anns = coco17_caption.loadAnns(coco17_caption.getAnnIds(imgIds=img['id']))
     
     return {
+        "image_id": img_id,
         "file_name": img["file_name"],
         "instances": [
                 {"category": id_name_mapping17[instance["category_id"]], "bbox": instance["bbox"], "pixel_area": instance["area"]} for instance in instance_anns
