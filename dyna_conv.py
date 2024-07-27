@@ -1,26 +1,39 @@
 from dyna.data import load_coco2017
 from dyna.utils import call_chatgpt
-from dyna.prompt import CONVERSATION_PROMPT
-from  infer.infer_llava import load_model, eval_model
+from dyna.prompt import CONVERSATION_PROMPT, CONVERSATION_PROMPT_GROUND_TRUTH
+from infer.infer_llava import load_model, eval_model
 import os
 import argparse
 import json
 import tqdm
 
-def dyna_conv(case):
-    prompt = CONVERSATION_PROMPT.format(case)
+
+def dyna_conv(case, with_ground_truth):
+    if with_ground_truth:
+        prompt = CONVERSATION_PROMPT_GROUND_TRUTH.format(case)
+    else:
+        prompt = CONVERSATION_PROMPT.format(case)
+
     conversations = [
-                    {"role": "system", "content": "You are a helpful conversation-based evaluator."},
-                    {"role": "user", "content": prompt}
+            {"role": "system", "content": "You are a helpful conversation-based evaluator."},
+            {"role": "user", "content": prompt}
     ]
     
     to_save = []
+    ground_truth_conversation = []
+
     while True:
         message_evaluator = call_chatgpt(conversations)
-        to_save.append({"role": "evaluator", "content": message_evaluator})
         if "END" in message_evaluator:
             break
-        
+
+        if with_ground_truth:
+            dictionary = json.loads(message_evaluator.strip())
+            message_evaluator = dictionary["question"]
+
+            ground_truth_conversation += [{"question": message_evaluator}, {"ground_truth": dictionary["ground_truth"]}]
+
+        to_save.append({"role": "evaluator", "content": message_evaluator})
         conversations.append({"role": "assistant", "content": message_evaluator})
         image_file = os.path.join("data/coco/val2017", case["file_name"])
         output = eval_model(model_name, tokenizer, model, image_processor, context_len, type('Args', (), {
@@ -41,7 +54,7 @@ def dyna_conv(case):
         output = output.strip().replace(".", '').lower()
         conversations.append({"role": "user", "content": output})
         to_save.append({"role": "evaluatee", "content": output})
-    return to_save
+    return to_save, ground_truth_conversation
 
 
 if __name__ == "__main__":
@@ -49,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
     parser.add_argument('--model_base', type=str, default=None)
     parser.add_argument('--model_path', type=str, default="liuhaotian/llava-v1.5-7b")
+    parser.add_argument('--ground_truth', action="store_true")
     parser.add_argument('--outdir', type=str, default="output/coco2017")
     args = parser.parse_args()
 
@@ -62,9 +76,10 @@ if __name__ == "__main__":
     
     print("starting conversation with model...")
     for sample in tqdm.tqdm(samples):
-        conv = dyna_conv(sample)
+        conv, ground_truth_conversation = dyna_conv(sample, args.ground_truth)
         sample["conversation"] = conv
-    
+        if args.ground_truth:
+            sample["ground_truth"] = ground_truth_conversation
     
     with open(output_path, "w") as f:
         json.dump(samples, f, indent=4)

@@ -6,7 +6,9 @@ import os
 import argparse
 import json
 import tqdm
-
+import nltk
+nltk.download('wordnet')
+from nltk.corpus import wordnet as wn
 
 def dyna_conv(case, question_type):
     if question_type == 're':
@@ -14,8 +16,21 @@ def dyna_conv(case, question_type):
     elif question_type == 'uq':
         prompt = CONVERSATION_UQ_PROMPT.format(case)
     elif question_type == 'ad':
+        instance_list = []
+        for instance in sample["instances"]:
+            object_name = instance["category"]
+            result_list = []
+            for word_list in wn.synonyms(object_name):
+                result_list += word_list
+            instance["relevant_words"] = result_list
+            # instance["relevant_words"] = set([synset.name().split('.')[0] for synset in wn.synsets(object_name, pos=wn.VERB)])
+            # instance["relevant_words"] = list(instance["relevant_words"].union(
+            #     set([synset.name().split('.')[0] for synset in wn.synsets(object_name, pos=wn.NOUN)])))
+            instance_list.append(instance)
+        case["instances"] = instance_list
         prompt = CONVERSATION_ADVERSARIAL_PROMPT.format(case)
 
+    print(prompt)
     conversations = [
         {"role": "system", "content": "You are a helpful conversation-based evaluator."},
         {"role": "user", "content": prompt}

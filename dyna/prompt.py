@@ -2,7 +2,7 @@ CONVERSATION_PROMPT = \
 """
 Task: Your task is to evaluate whether a vision-language model will hallucinate (i.e. provide information contradictory to the image). 
 Given the grounding of the image, your task is to perform a series of casual conversations with the model naturally by asking questions or making statements about the image and determine whether the model is hallucinating or not in its response.
-The conversation is multi-turn and can be open-ended and you need to ask questions based on the history of the conversations. 
+The conversation is multi-turn and can be open-ended. You need to ask questions based on the history of the conversations. 
 
 Requirements:
 1. You need to perform a casual conversation with the model naturally by asking questions or making statements about the image.
@@ -19,6 +19,49 @@ Provided ground-truth information about the image:
 {}
 
 Please respond as if you are having the conversation with the vision-language model. If you want to end the conversation, please output "END" ONLY.
+"""
+
+CONVERSATION_PROMPT_GROUND_TRUTH = \
+"""
+Task: Your task is to evaluate whether a vision-language model will hallucinate (i.e. provide information contradictory to the image). 
+Given the grounding of the image, your task is to perform a series of casual conversations with the model naturally by asking questions or making statements about the image and determine whether the model is hallucinating or not.
+Each question you ask should have a corresponding ground-truth answer. The conversation is multi-turn and can be open-ended. You need to ask questions and generate ground-truth answers based on the history of the conversations. 
+
+Requirements:
+1. You need to perform a casual conversation with the model naturally by asking questions or making statements about the image.
+2. The conversation is multi-turn and you need to ask questions and generate ground-truth answers based on the history of the conversations.
+3. When you try to ask questions and generate ground-truth answers, you need to consider several factors: 
+COVERAGE: the whole conversation should cover all the information provided to you about the image and ask questions that cover as many details as possible. For example, if the model responses fail to cover some specific object or attributes of the objects, you should cover this in the subsequent conversation.
+ANSWERABLE: generate a ground-truth answer based on the ground-truth information for each question you ask.
+4. You can start with a general question such as 'Please provide a brief description of the image' or 'What is the main object in the image?' and then ask more specific questions based on the response. 
+5. Make the conversation as natural as possible. You should act as if you are a human having conversation with the model. You can also do role-playing or act in context, such as asking for assistance in understanding the image.
+6. At each turn, you should only provide your part of the conversation and wait for the VLM to respond.
+7. If you have asked all the questions and covered all the information about the image, you can end the conversation by outputing "END".
+8. Please act as if you are having the conversation directly with the vision-language model. And the the response from the vision-language model will be directly given to you, as if the model is also having the conversation with you.
+
+Format: You should output the question-answer pair in the format of a dictionary. The dictionary contains the two keys: question, ground_truth.
+{{"question": <question>, "ground_truth": <ground truth>}}
+
+Examples for question-answer pairs:
+Ground-truth information: A black cat with green eyes sitting in the sun.
+Ground-truth information: A cat that is staring at the camera.
+Ground-truth information: A black cat sitting in a field of grass.
+
+-----Example 1-----
+{{"question": "Please provide a brief description of the image.", "ground_truth": "A black cat with green eyes sitting in the sun."}}
+-----Example 2-----
+{{"question": "What is the cat doing?", "ground_truth": "The cat is staring at the camera."}}
+-----Example 3-----
+{{"question": "What is the color of the white cat's eyes?", "ground_truth": "Green."}}
+-----Example 4-----
+{{"question": "How many cats are sitting in the image?", "ground_truth": "One."}}
+-----Example 5-----
+{{"question": "How is the weather in the image?", "ground_truth": "It is a sunny dat."}}
+
+Provided ground-truth information about the image:
+{}
+
+You only respond in the format described above. If you want to end the conversation, please output "END" ONLY.
 """
 
 CONVERSATION_PERSONA_SELECTION_PROMPT = \
@@ -87,6 +130,42 @@ Please generate 5 personas, objectives and questions. You MUST only respond in t
 #Begin
 """
 
+# CONVERSATION_PERSONA_PROMPT = \
+# """
+# Task: Your task is to simulate a person in context using the given persona with its objective and evaluate whether a vision-language model will hallucinate (i.e. provide information contradictory to the image) on images under such context.
+# Given the grounding of the image and the provided persona and objective, your task is to act as the given persona under the context to perform a series of casual conversations with the model naturally by asking questions or making statements about the image.
+# The conversation is multi-turn and can be open-ended and you need to ask questions based on the history of the conversations.
+#
+# Requirements:
+# 1. You need to perform a casual conversation with the model naturally by asking questions or making statements about the image under the given context following the provided persona.
+# 2. The conversation is multi-turn and you need to ask questions based on the history of the conversations.
+# 3. When you try to ask questions, you need to consider several factors:
+# FOCUS: the questions asked or the statements made must match the traits of the selected personas.
+# COVERAGE: the whole conversation should cover all the information provided to you about the image and ask questions that cover as many details as possible. For example, if the model responses fail to cover some specific object or attributes of the objects, you should cover this in the subsequent conversation.
+# NATURALNESS: make the conversation as natural as possible. You should act as if you are a human having conversation with the model. You can also do role-playing or act in context, such as asking for assistance in understanding the image.
+# 4. Make the conversation as natural as possible. You should act as if you are a human having conversation with the model.
+# 5. At each turn, you should only provide your part of the conversation and wait for the VLM to respond.
+# 6. If you have asked all the questions and covered all the information about the image, you can end the conversation by outputing "END".
+# 7. Please act as if you are having the conversation directly with the vision-language model, acting as the provided persona in the given context. And the the response from the vision-language model will be directly given to you, as if the model is also having the conversation with you.
+# 8. You should NEVER provide the ground-truth information about the image to the vision-language model being evaluated (i.e. DON'T mention any given ground-truth information actively in your question to the model).
+#
+# Bad example:
+# Ground-truth information: The image contains traffic light or an umbrella in the street.
+# You: Could you detail any other objects or environmental features in the image that might provide context to the scene, such as a traffic light or an umbrella?
+# Reason: you should never mention ground-truth information such as a traffic light or an umbrella, which may give a hint to the vlm.
+#
+# Persona: {}
+#
+# Objective: {}
+#
+# Initial question: {}
+#
+# Provided ground-truth information about the image:
+# {}
+#
+# Please start with the initial question and respond as if you are having the conversation with the vision-language model. If you want to end the conversation, please output "END" ONLY.
+# """
+
 CONVERSATION_PERSONA_PROMPT = \
 """
 Task: Your task is to simulate a person in context using the given persona with its objective and evaluate whether a vision-language model will hallucinate (i.e. provide information contradictory to the image) on images under such context. 
@@ -98,11 +177,10 @@ Requirements:
 2. The conversation is multi-turn and you need to ask questions based on the history of the conversations.
 3. When you try to ask questions, you need to consider several factors: 
 FOCUS: the questions asked or the statements made must match the traits of the selected personas.
-COVERAGE: the whole conversation should cover all the information provided to you about the image and ask questions that cover as many details as possible. For example, if the model responses fail to cover some specific object or attributes of the objects, you should cover this in the subsequent conversation.
 NATURALNESS: make the conversation as natural as possible. You should act as if you are a human having conversation with the model. You can also do role-playing or act in context, such as asking for assistance in understanding the image.
 4. Make the conversation as natural as possible. You should act as if you are a human having conversation with the model.
 5. At each turn, you should only provide your part of the conversation and wait for the VLM to respond.
-6. If you have asked all the questions and covered all the information about the image, you can end the conversation by outputing "END".
+6. If you have asked all the questions, you can end the conversation by outputing "END".
 7. Please act as if you are having the conversation directly with the vision-language model, acting as the provided persona in the given context. And the the response from the vision-language model will be directly given to you, as if the model is also having the conversation with you.
 8. You should NEVER provide the ground-truth information about the image to the vision-language model being evaluated (i.e. DON'T mention any given ground-truth information actively in your question to the model).
 
@@ -209,7 +287,7 @@ Requirements:
 COVERAGE: the whole conversation should cover all the information provided to you about the image and ask questions that cover as many details as possible. For example, if the model responses fail to cover some specific object or attributes of the objects, you should cover this in the subsequent conversation.
 DIVERSITY: the main type of questions in this conversation are adversarial questions designed to deliberately elicit hallucination.
 NATURALNESS: make the conversation as natural as possible. You should act as if you are a human having conversation with the model. You can also do role-playing or act in context, such as asking for assistance in understanding the image.
-4. To generate adversarial questions, replace the objects and adjectives in the ground-truth image information with their antonyms.
+4. To generate adversarial questions, use the words frequently co-occurring with the object in the ground-truth information. The question should be answerable based on the provided ground-truth information.
 5. You can start with a general question such as 'Please provide a brief description of the image' or 'What is the main object in the image?' and then ask more specific questions based on the response. 
 6. At each turn, you should only provide your part of the conversation and wait for the VLM to respond.
 7. If you have asked all the questions and covered all the information about the image, you can end the conversation by outputing "END".
@@ -218,16 +296,19 @@ NATURALNESS: make the conversation as natural as possible. You should act as if 
 Examples for adversarial question:
 -----Example 1-----
 Ground-truth information: A black cat with green eyes sitting in the sun.
+Related word: fur
 You: Describe the rainbow-colored fur of the cat in this image.
 Reason: The cat has black fur, making the mention of rainbow-colored fur implausible.
 -----Example 2-----
 Ground-truth information: A cat that is staring at the camera.
+Related word: game
 You: What game is the cat playing while staring at the camera?
 Reason: The cat is only described as staring at the camera, not playing a game.
 -----Example 3-----
 Ground-truth information: A black cat sitting in a field of grass.
-You: How many cats are there in the image?
-Reason: Since the ground truth only mentions one cat, the model might incorrectly identify multiple cats or additional animals.
+Related word: run
+You: How many cats are running in the image?
+Reason: Since the ground truth only mentions one cat sitting in a field of grass, the model might incorrectly identify multiple running cats or additional animals.
 
 Provided ground-truth information about the image:
 {}
