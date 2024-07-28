@@ -1,6 +1,8 @@
 from dyna.data import load_coco2017, format_case_coco
 from dyna.utils import call_chatgpt
+
 from dyna.prompt import CONVERSATION_PROMPT, CONVERSATION_PROMPT_GROUND_TRUTH
+
 from dyna.promptv2 import CONV_COVERAGE_PROMPT_CERTAINTY, CONV_COVERAGE_PROMPT
 from infer.infer_llava import load_model, eval_model
 import os
@@ -64,6 +66,8 @@ def dyna_conv(case, with_ground_truth):
     return to_save, ground_truth_conversation
 
 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
@@ -73,13 +77,11 @@ if __name__ == "__main__":
     parser.add_argument('--outdir', type=str, default="output/coco2017")
     args = parser.parse_args()
 
-    os.makedirs(args.outdir, exist_ok=True)
+    os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
     # need to figure out how to eval on different models
     model_name, tokenizer, model, image_processor, context_len = load_model(args.model_path, args.model_base)
     model_path = args.model_path
     samples = load_coco2017(args.debug)
-    
-    output_path = os.path.join(args.outdir, "conversation.json")
     
     print("starting conversation with model...")
     for sample in tqdm.tqdm(samples):
@@ -87,6 +89,6 @@ if __name__ == "__main__":
         sample["conversation"] = conv
         if args.ground_truth:
             sample["ground_truth"] = ground_truth_conversation
-    
-    with open(output_path, "w") as f:
+
+    with open(args.outfile, "w") as f:
         json.dump(samples, f, indent=4)
