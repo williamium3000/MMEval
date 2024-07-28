@@ -28,6 +28,7 @@ def load_sample_coco2017(img_id):
     caption_anns = coco17_caption.loadAnns(coco17_caption.getAnnIds(imgIds=img['id']))
     
     return {
+        "image_id": img_id,
         "file_name": img["file_name"],
         "instances": [
                 {"category": id_name_mapping17[instance["category_id"]], "bbox": instance["bbox"], "pixel_area": instance["area"]} for instance in instance_anns
@@ -36,12 +37,11 @@ def load_sample_coco2017(img_id):
                 caption["caption"] for caption in caption_anns
             ]
     }
-
-
+    
 def load_coco2017(debug=False):
     all_img_ids = coco17_instance.getImgIds()
     if debug:
-        all_img_ids = all_img_ids[:1]
+        all_img_ids = all_img_ids[:30]
         
     samples = []
     print(f"loading coco2017: total {len(all_img_ids)}")
@@ -49,7 +49,16 @@ def load_coco2017(debug=False):
         case = load_sample_coco2017(img_id)
         samples.append(case)
     return samples
-        
+
+
+def format_case_coco(case):
+    formatted = "\n".join(case["captions"]) + "\n"
+    instances = case["instances"]
+    for ins in instances:
+        formatted += f"{ins['category']} bbox: {ins['bbox']} size: {ins['pixel_area']}\n"
+    return formatted
 
 if __name__ == "__main__":
     load_coco2017()
+
+    

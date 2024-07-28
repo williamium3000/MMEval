@@ -1,23 +1,30 @@
-from dyna.data import load_coco2017
+from dyna.data import load_coco2017, format_case_coco
 from dyna.utils import call_chatgpt
 from dyna.prompt import CONVERSATION_PROMPT, CONVERSATION_PROMPT_GROUND_TRUTH
+from dyna.promptv2 import CONV_COVERAGE_PROMPT_CERTAINTY, CONV_COVERAGE_PROMPT
 from infer.infer_llava import load_model, eval_model
 import os
 import argparse
 import json
 import tqdm
-
+import copy
 
 def dyna_conv(case, with_ground_truth):
-    if with_ground_truth:
-        prompt = CONVERSATION_PROMPT_GROUND_TRUTH.format(case)
-    else:
-        prompt = CONVERSATION_PROMPT.format(case)
-
+    # if with_ground_truth:
+    #     prompt = CONVERSATION_PROMPT_GROUND_TRUTH.format(case)
+    # else:
+    #     prompt = CONVERSATION_PROMPT.format(case)
+    #
+    prompt = CONV_COVERAGE_PROMPT_CERTAINTY.format(format_case_coco(case))
     conversations = [
-            {"role": "system", "content": "You are a helpful conversation-based evaluator."},
-            {"role": "user", "content": prompt}
+                    {"role": "system", "content": "You are a helpful AI visual assistant that can analyze a single image and capable of having a conversation with a human."},
+                    {"role": "user", "content": prompt}
     ]
+    #
+    # conversations = [
+    #         {"role": "system", "content": "You are a helpful conversation-based evaluator."},
+    #         {"role": "user", "content": prompt}
+    # ]
     
     to_save = []
     ground_truth_conversation = []
@@ -51,7 +58,7 @@ def dyna_conv(case, with_ground_truth):
                                 "num_beams": 1,
                                 "max_new_tokens": 512
                             })())
-        output = output.strip().replace(".", '').lower()
+        output = output.lower()
         conversations.append({"role": "user", "content": output})
         to_save.append({"role": "evaluatee", "content": output})
     return to_save, ground_truth_conversation
