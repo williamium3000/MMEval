@@ -7,7 +7,7 @@ The conversation is multi-turn and can be open-ended and you need to ask questio
 Requirements:
 1. The conversation is a multi-turn process and your current response should be based on the history of the conversations.
 2. At each round, you should only provide your part of the conversation and wait for the human to respond.
-3. You should make the conversation as natural as possible and act as if you are a human having conversation directly with another human.-
+3. You should make the conversation as natural as possible and act as if you are a human having conversation directly with another human.
 4. COVERAGE: the whole conversation is expected to COVER all the information regarding the image, you should ask questions that cover as many details as possible. If the human responses fail to cover some specific object, attributes or relations in the image, you should cover this in the subsequent conversations.
 5. DO NOT DISCLOSE any given image information (captions and bboxes) directly to the human in your conversation. Also, DO NOT mention that the information source is the caption or the bounding box.
 6. Focus your conversation on the content of the image. Remember the purpose of the conversation is to assess the human's perception and knowledge of the image.
@@ -18,6 +18,8 @@ Image information:
 
 You can start the conversation first.
 """
+
+
 CONV_COVERAGE_PROMPT_CERTAINTY = \
 """
 Task: Your task is to have a conversation with a human regarding the image provided to you. This image will be presented to you as five captions, each describing the same image you are observing, and a list of objects with specific coordinates locations in the image, represented as (x1, y1, x2, y2) with floating numbers ranging from 0 to 1. These values correspond to the top left x, top left y, bottom right x, and bottom right y.

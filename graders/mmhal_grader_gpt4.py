@@ -73,6 +73,7 @@ To evaluate the LMM responses, first, begin your evaluation by providing a short
 {}
 '''
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--response', type=str, default='responses/idefics_80b.json', help='response file containing images, questions, and model responses')

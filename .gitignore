@@ -165,5 +165,4 @@ slurm_logs
 LLaVA/
 mplug_owl2/
 output/
-.DS_Store
-**/.DS_Store
+.DS_Store/

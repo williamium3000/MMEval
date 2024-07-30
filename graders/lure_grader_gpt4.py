@@ -17,6 +17,7 @@ caption 5: {description 5}
 Output:
 '''
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--response', type=str, default='responses/idefics_80b.json', help='response file containing images, questions, and model responses')

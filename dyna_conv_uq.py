@@ -1,4 +1,4 @@
-from dyna.data import load_coco2017
+from dyna.data import load_coco2017, format_case_coco
 from dyna.utils import call_chatgpt
 from dyna.prompt import CONVERSATION_UQ_PROMPT, CONVERSATION_ADVERSARIAL_PROMPT, CONVERSATION_PROMPT
 from infer.infer_llava import load_model, eval_model
@@ -7,14 +7,17 @@ import argparse
 import json
 import tqdm
 import nltk
+
 nltk.download('wordnet')
 from nltk.corpus import wordnet as wn
 
-def dyna_conv(case, question_type):
+
+def dyna_conv(case, question_type, include_image=False):
+    formatted_case = format_case_coco(case)
     if question_type == 're':
-        prompt = CONVERSATION_PROMPT.format(case)
+        prompt = CONVERSATION_PROMPT.format(formatted_case)
     elif question_type == 'uq':
-        prompt = CONVERSATION_UQ_PROMPT.format(case)
+        prompt = CONVERSATION_UQ_PROMPT.format(formatted_case)
     elif question_type == 'ad':
         instance_list = []
         for instance in sample["instances"]:
@@ -23,18 +26,35 @@ def dyna_conv(case, question_type):
             for word_list in wn.synonyms(object_name):
                 result_list += word_list
             instance["relevant_words"] = result_list
-            # instance["relevant_words"] = set([synset.name().split('.')[0] for synset in wn.synsets(object_name, pos=wn.VERB)])
-            # instance["relevant_words"] = list(instance["relevant_words"].union(
-            #     set([synset.name().split('.')[0] for synset in wn.synsets(object_name, pos=wn.NOUN)])))
             instance_list.append(instance)
         case["instances"] = instance_list
         prompt = CONVERSATION_ADVERSARIAL_PROMPT.format(case)
 
-    print(prompt)
-    conversations = [
-        {"role": "system", "content": "You are a helpful conversation-based evaluator."},
-        {"role": "user", "content": prompt}
-    ]
+    if include_image:
+        conversations = [
+            {"role": "system",
+             "content": "You are a helpful AI visual assistant that can analyze a single image and capable of having "
+                        "a conversation with a human."},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": case["image_url"],
+                            "detail": "auto"
+                        },
+                    },
+                ],
+            }
+        ]
+    else:
+        conversations = [
+            {"role": "system", "content": "You are a helpful AI visual assistant that can analyze a single image and capable of having "
+                        "a conversation with a human."},
+            {"role": "user", "content": prompt}
+        ]
 
     to_save = []
     while True:
@@ -72,21 +92,20 @@ if __name__ == "__main__":
     parser.add_argument('--model_base', type=str, default=None)
     parser.add_argument('--question_type', type=str, default=None, choices=['re', 'uq', 'ad'])
     parser.add_argument('--model_path', type=str, default="liuhaotian/llava-v1.5-7b")
-    parser.add_argument('--outdir', type=str, default="output/coco2017")
+    parser.add_argument('--include_image', action="store_true")
+    parser.add_argument('--outfile', type=str, default="output/revised_coco2017/conversation.json")
     args = parser.parse_args()
 
-    os.makedirs(args.outdir, exist_ok=True)
+    os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
     # need to figure out how to eval on different models
     model_name, tokenizer, model, image_processor, context_len = load_model(args.model_path, args.model_base)
     model_path = args.model_path
     samples = load_coco2017(args.debug)
 
-    output_path = os.path.join(args.outdir, f"conversation_{args.question_type}.json")
-
     print("starting conversation with model...")
     for sample in tqdm.tqdm(samples):
-        conv = dyna_conv(sample, args.question_type)
+        conv = dyna_conv(sample, args.question_type, args.include_image)
         sample["conversation"] = conv
 
-    with open(output_path, "w") as f:
+    with open(args.outfile, "w") as f:
         json.dump(samples, f, indent=4)

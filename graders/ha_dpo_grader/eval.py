@@ -7,6 +7,7 @@ from PIL import Image
 from shr_utils import *
 from gpt_utils import *
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="SHR Evaluation")
     parser.add_argument("--api-key", type=str, required=True, help="key to the OPENAI API.")
@@ -17,6 +18,7 @@ def parse_args():
     args = parser.parse_args()
 
     return args
+
 
 if __name__ == '__main__':
     args = parse_args()
