@@ -2,6 +2,7 @@ import openai
 import argparse
 import json
 import time
+from dyna.data import load_coco2017, format_case_coco
 
 template = '''Please act as an impartial and objective judge and evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question. Your evaluation should be mainly based on whether the response is informative, and whether the response contains any hallucination. Hallucination, in this context, refers to a situation where the LMM generates a response that includes information not present or implied in the image or previous conversation. A hallucination could be a false claim about an object, action, emotion, or any other detail that is not grounded in the image.
 
@@ -87,34 +88,33 @@ if __name__ == '__main__':
     with open(args.response, 'r') as f:
         records = json.load(f)
 
-    assert len(records) == 96
-
     # ask GPT-4 to evaluate
     responses = []
     for i, record in enumerate(records):
-        image_content = ', '.join(record['image_content'])
-        input_text = template.format(image_content, record['question'], record['gt_answer'], record['model_answer'])
-        # print(input_text)
+        image_content = format_case_coco(record)
+        for one_round_conv in record['conversations']:
+            input_text = template.format(image_content, one_round_conv['prompt'], one_round_conv['response'], one_round_conv['gt'])
+            # print(input_text)
 
-        response = None
-        while response is None:
-            try:
-                response = openai.ChatCompletion.create(
-                    model=args.gpt_model,
-                    messages=[
-                        {"role": "user", "content": input_text}
-                    ],
-                    temperature=0.0,
-                )
-            except Exception as e:
-                print(e)
-                print('retrying...')
-                time.sleep(10)
-                continue
+            response = None
+            while response is None:
+                try:
+                    response = openai.ChatCompletion.create(
+                        model=args.gpt_model,
+                        messages=[
+                            {"role": "user", "content": input_text}
+                        ],
+                        temperature=0.0,
+                    )
+                except Exception as e:
+                    print(e)
+                    print('retrying...')
+                    time.sleep(10)
+                    continue
 
-        print(i, response['choices'][0]['message']['content'], flush=True)
-        responses.append(response)
-        time.sleep(1)
+            print(i, response['choices'][0]['message']['content'], flush=True)
+            responses.append(response)
+            time.sleep(1)
 
     # save responses
     if args.evaluation is not None:

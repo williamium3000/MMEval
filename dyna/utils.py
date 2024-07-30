@@ -32,4 +32,11 @@ def call_chatgpt(messages, model_name="gpt-4o"):
 
     return completion.choices[0].message.content
 
+def call_chatgpt_json(messages, model_name="gpt-4o"):
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        response_format={"type": "json_object"}
+    )
 
+    return response.choices[0].message.content
