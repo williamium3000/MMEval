@@ -5,11 +5,14 @@ import argparse
 import json
 import tqdm
 import re
+
+
 def parse_json(text):
     pattern = r"```[(.*)]```"
     match = re.search(pattern, text, re.DOTALL)
     json_text = match.group(1) if match else text
     return json.loads(json_text)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
