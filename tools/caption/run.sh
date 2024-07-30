@@ -11,4 +11,4 @@
 
 mkdir -p slurm_logs
 conda activate llava
-python caption.py --debug --outfile output/coco2017/caption.json
+python caption.py --debug --outfile output/caption/caption.json

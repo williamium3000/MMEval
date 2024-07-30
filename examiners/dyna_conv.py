@@ -1,6 +1,6 @@
-from dyna.data import load_coco2017, format_case_coco
-from dyna.utils import call_chatgpt_json
-from dyna.promptv2 import CONV_COVERAGE_PROMPT_CERTAINTY, CONV_COVERAGE_PROMPT, CONV_COVERAGE_PROMPT_CERTAINTY_WITH_ANSWER
+from utils.coco import load_coco2017, format_case_coco
+from utils.utils import call_chatgpt
+from examiners.prompt import PROMPTS
 from infer.infer_llava import load_model, eval_model
 import os
 import argparse
@@ -8,8 +8,9 @@ import json
 import tqdm
 import copy
 
-def dyna_conv(case):
-    prompt = CONV_COVERAGE_PROMPT_CERTAINTY_WITH_ANSWER.format(format_case_coco(case))
+def dyna_conv(args, case):
+    template = PROMPTS[args.p_mode]
+    prompt = template.format(format_case_coco(case))
     conversations = [
                     {"role": "system", "content": "You are a helpful AI visual assistant that can analyze a single image and capable of having a conversation with a human."},
                     {"role": "user", "content": prompt}
@@ -18,16 +19,12 @@ def dyna_conv(case):
     to_save = []
     r = 0
     while True:
-        message = call_chatgpt_json(conversations)
-        message_json = json.loads(message)
-        message_evaluator, gt_answer = message_json["prompt"], message_json["response"]
-        
-        print(message)
+        message_evaluator = call_chatgpt(conversations)
         
         if "END" in message_evaluator:
             break
         
-        conversations.append({"role": "assistant", "content": message})
+        conversations.append({"role": "assistant", "content": message_evaluator})
         image_file = os.path.join("data/coco/val2017", case["file_name"])
         output = eval_model(model_name, tokenizer, model, image_processor, context_len, type('Args', (), {
                                 "model_path": model_path,
@@ -48,7 +45,7 @@ def dyna_conv(case):
         conversations.append({"role": "user", "content": output})
         r += 1
         to_save.append(
-            {"round_id": r, "prompt": message_evaluator, "response":output, "gt": gt_answer}
+            {"round_id": r, "prompt": message_evaluator, "response":output}
         )
     return to_save
 
@@ -56,6 +53,7 @@ def dyna_conv(case):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--p_mode", type=str, default="certainty")
     parser.add_argument('--model_base', type=str, default=None)
     parser.add_argument('--model_path', type=str, default="liuhaotian/llava-v1.5-7b")
     parser.add_argument('--outfile', type=str)
@@ -69,7 +67,7 @@ if __name__ == "__main__":
     
     print("starting conversation with model...")
     for sample in tqdm.tqdm(samples):
-        conv = dyna_conv(sample)
+        conv = dyna_conv(args, sample)
         sample["conversations"] = conv
     
     

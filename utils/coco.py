@@ -1,5 +1,3 @@
-import itertools
-
 from pycocotools.coco import COCO
 
 coco17_instance = COCO("data/coco/annotations/instances_val2017.json")
@@ -10,30 +8,17 @@ coco14_instance = COCO("data/coco/annotations/instances_val2014.json")
 coco14_caption = COCO("data/coco/annotations/captions_val2014.json")
 cats14 = coco14_instance.loadCats(coco14_instance.getCatIds())
 id_name_mapping14 = {cat["id"]: cat["name"] for cat in cats14}
+
 from openai import OpenAI
-import os
 from dotenv import load_dotenv
-from nltk.corpus import wordnet as wn
 
 load_dotenv(".env")
 
-client = OpenAI()
+import tqdm
+import time
 
 
-def call_chatgpt(messages, model_name="gpt-4o"):
-    # messages = [
-    #     {"role": "system", "content": "You are a helpful assistant."},
-    #     {"role": "user", "content": message}
-    # ]
-
-    completion = client.chat.completions.create(
-        model=model_name,
-        messages=messages
-    )
-    return completion.choices[0].message
-
-
-def load_coco2017(img_id):
+def load_sample_coco2017(img_id):
     img = coco17_instance.loadImgs(img_id)[0]
 
     annIds = coco17_instance.getAnnIds(imgIds=img_id, iscrowd=None)
@@ -41,6 +26,8 @@ def load_coco2017(img_id):
     caption_anns = coco17_caption.loadAnns(coco17_caption.getAnnIds(imgIds=img['id']))
 
     return {
+        "image_id": img_id,
+        "image_url": img["coco_url"],
         "file_name": img["file_name"],
         "instances": [
             {"category": id_name_mapping17[instance["category_id"]], "bbox": instance["bbox"],
@@ -51,16 +38,28 @@ def load_coco2017(img_id):
         ]
     }
 
-def call_chatgpt_json(messages, model_name="gpt-4o"):
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        response_format={"type": "json_object"}
-    )
 
-    return response.choices[0].message.content
+def load_coco2017(debug=False):
+    all_img_ids = coco17_instance.getImgIds()
+    if debug:
+        all_img_ids = all_img_ids[:5]
 
-def get_synset(word):
-    syn_list = wn.synonyms(word)
-    syn_list = list(itertools.chain.from_iterable(syn_list))
-    return [word]+[' '.join(syn.split('_')) for syn in syn_list]
+    samples = []
+    print(f"loading coco2017: total {len(all_img_ids)}")
+    for img_id in tqdm.tqdm(all_img_ids):
+        case = load_sample_coco2017(img_id)
+        samples.append(case)
+    return samples
+
+
+def format_case_coco(case):
+    formatted = "descriptions:\n" + "\n".join(case["captions"]) + "\n"
+    formatted += "instances:\n"
+    instances = case["instances"]
+    for ins in instances:
+        formatted += f"{ins['category']} bbox: {ins['bbox']} size: {ins['pixel_area']}\n"
+    return formatted
+
+
+if __name__ == "__main__":
+    load_coco2017()
