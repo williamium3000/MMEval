@@ -130,7 +130,12 @@ def eval_model(model_name, tokenizer, model, image_processor, context_len, args)
     return outputs
 
 
-
+def load_model(model_path, model_base):
+    model_name = get_model_name_from_path(model_path)
+    tokenizer, model, image_processor, context_len = load_pretrained_model(
+            model_path, model_base, model_name
+        )
+    return model_name, tokenizer, model, image_processor, context_len
 
 if __name__ == "__main__":
 
@@ -148,11 +153,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
+    model_name, tokenizer, model, image_processor, context_len = load_model(args.model_path, args.model_base)
     model_path = args.model_path
-    model_name = get_model_name_from_path(args.model_path)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(
-            model_path, args.model_base, get_model_name_from_path(model_path)
-        )
     
     # format:
     # a list of dict
