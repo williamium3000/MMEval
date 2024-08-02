@@ -2,7 +2,12 @@ import openai
 import argparse
 import json
 import time
-from dyna.data import load_coco2017, format_case_coco
+from utils.coco import format_case_coco
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv(".env")
 
 template = '''Please act as an impartial and objective judge and evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question. Your evaluation should be mainly based on whether the response is informative, and whether the response contains any hallucination. Hallucination, in this context, refers to a situation where the LMM generates a response that includes information not present or implied in the image or previous conversation. A hallucination could be a false claim about an object, action, emotion, or any other detail that is not grounded in the image.
 
@@ -77,13 +82,11 @@ To evaluate the LMM responses, first, begin your evaluation by providing a short
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--response', type=str, default='responses/idefics_80b.json', help='response file containing images, questions, and model responses')
+    parser.add_argument('--response', type=str, default='output/dyna_bad_examples/coverage_certainty_with_answer_json_mode.json', help='response file containing images, questions, and model responses')
     parser.add_argument('--evaluation', type=str, default=None, help='GPT-4 evaluation results to be saved')
-    parser.add_argument('--api-key', type=str, required=True)
-    parser.add_argument('--gpt-model', type=str, default='gpt-4-0314')
+    parser.add_argument('--gpt-model', type=str, default='gpt-4o')
     args = parser.parse_args()
 
-    openai.api_key = args.api_key
 
     # load json file
     with open(args.response, 'r') as f:
@@ -100,9 +103,10 @@ if __name__ == '__main__':
             response = None
             while response is None:
                 try:
-                    response = openai.ChatCompletion.create(
+                    response = openai.chat.completions.create(
                         model=args.gpt_model,
                         messages=[
+                            {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
                             {"role": "user", "content": input_text}
                         ],
                         temperature=0.0,
@@ -113,11 +117,12 @@ if __name__ == '__main__':
                     time.sleep(10)
                     continue
 
-            print(i, response['choices'][0]['message']['content'], flush=True)
-            responses.append(response)
+            print(i, response.choices[0].message.content, flush=True)
+            responses.append(response.choices[0].message.content)
             time.sleep(1)
 
     # save responses
+    os.makedirs(os.path.dirname(args.evaluation), exist_ok=True)
     if args.evaluation is not None:
         with open(args.evaluation, 'w') as f:
             json.dump(responses, f, indent=2)
@@ -125,7 +130,6 @@ if __name__ == '__main__':
     # analyze responses
     scores = []
     for i, response in enumerate(responses):
-        response = response['choices'][0]['message']['content']
         scores_found = []
         for s in range(7):
             if f'rating: {s}' in response.lower():
@@ -144,12 +148,6 @@ if __name__ == '__main__':
         else:
             hallucination.append(1)
 
-    scores_each = [[] for _ in range(8)]
-    # assuming order of 96 questions is not changed
-    for i in range(96):
-        question_type = i % 8
-        scores_each[question_type].append(scores[i])
 
     print('Average score: {:.2f}'.format(sum(scores) / len(scores)))
     print('Hallucination rate: {:.2f}'.format(sum(hallucination) / len(hallucination)))
-    print('Average score for each question type:', ','.join([str(round(sum(scores_each[i]) / len(scores_each[i]), 2)) for i in range(8)]), flush=True)

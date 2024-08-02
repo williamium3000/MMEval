@@ -9,6 +9,6 @@
 #SBATCH --gres=gpu:1
 #SBATCH --output "slurm_logs/slurm-%j.out"
 
-mkdir -p slurm_logs
-conda activate llava
-python caption.py --debug --outfile output/caption/caption.json
+# mkdir -p slurm_logs
+# conda activate llava
+python examiners/caption.py --debug --outfile output/caption/caption.json

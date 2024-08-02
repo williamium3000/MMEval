@@ -1,6 +1,5 @@
-from dyna.data import load_coco2017, format_case_coco
-from dyna.utils import call_chatgpt
-from dyna.promptv2 import CONV_COVERAGE_PROMPT_CERTAINTY
+from utils.coco import load_coco2017, format_case_coco
+from utils.utils import call_chatgpt, call_chatgpt_json
 from infer.infer_llava import load_model, eval_model
 import os
 import argparse
@@ -28,7 +27,7 @@ def dyna_conv(case):
                         })())
     output = output.lower()
     to_save = [
-        {"round_id": 0, "prompt": "Please provide a detailed description.", "response": output}
+        {"round_id": 0, "prompt": "Please provide a brief description.", "response": output}
     ]
     
     return to_save

@@ -17,4 +17,4 @@ for sample in samples:
 
 filename = os.path.basename(args.json)
 
-json.dump(samples, open(os.path.join("eval/chair/output", filename), 'w'), indent=4)
+json.dump(samples, open(os.path.join("graders/chair/output", filename), 'w'), indent=4)

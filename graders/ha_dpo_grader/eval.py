@@ -3,18 +3,41 @@ import json
 import tqdm
 import argparse
 from PIL import Image
+import openai
+import time
 
 from shr_utils import *
-from gpt_utils import *
 
+
+from dotenv import load_dotenv
+
+load_dotenv(".env")
+
+GPT_JUDGE_PROMPT = '''
+Please help me judge if the comment of this image is hallucination or correct. 
+I will give you a list of region description of a image. The format is [x1, y1, x2, y2]: region description, where [x1, y1, x2, y2] is the bounding box of the region. This is the ground truth information of the image. Besides, I give you some factual information about the content of the image (which is 100% accurate). Your judgement should base on this information. However, this information only descibe the objects in the region of image, so it cannot descibe the subjective part of the image, e.g., atmosphere, style, emotion. In that case, you can return "Cannot judge".
+Also, I will give you a list of comments of the image for you to judge if it is hallucination. Please give a judgement one by one along with the reason.
+
+Your output should be:
+Judgement:
+1. hallucination or correct or cannot judge: <reason>
+2. ...
+
+Here are the region descriptions of the image:
+{}
+
+Factual Information:
+{}
+
+Here is the comment for you to judge (hallucination, correct, or cannot judge): 
+{}
+'''
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SHR Evaluation")
-    parser.add_argument("--api-key", type=str, required=True, help="key to the OPENAI API.")
-    parser.add_argument("--json-file", type=str, required=True, help="path to the json file, where model responses are stored.")
-    parser.add_argument("--vg-path", type=str, required=True, help="path to vg file.")
-    parser.add_argument("--shr-path", type=str, required=True, help="path to SHR annotation.")
-    parser.add_argument("--no-gpt-judge", default=False, action='store_true', help="whether not to do GPT evaluation. If True, only evaluate ngram repetition.")
+    # parser.add_argument("--api-key", type=str, required=True, help="key to the OPENAI API.")
+    parser.add_argument("json_file", type=str, help="path to the json file, where model responses are stored.")
+    parser.add_argument('--outdir', type=str, default=None, help='GPT-4 evaluation results to be saved')
     args = parser.parse_args()
 
     return args
@@ -24,114 +47,72 @@ if __name__ == '__main__':
     args = parse_args()
     
     # setup openai
-    setup_openai(args.api_key)
-    
-    # visual genome annotations
-    val_images = json.load(open(os.path.join(args.shr_path, "val_images_final.json")))
-    vg_image_data = json.load(open(os.path.join(args.vg_path, "image_data.json")))
-    id2path = {
-        _data["image_id"]:os.path.join(args.vg_path, _data["url"].split("/")[-2], _data["url"].split("/")[-1]) 
-        for _data in vg_image_data
-    }
-    id2img = {_data["image_id"]:_data for _data in vg_image_data}
-    region = json.load(open(os.path.join(args.vg_path, "region_descriptions.json")))
-    id2reg = {r["regions"][0]["image_id"]:r for r in region}
-    
-    # factual information
-    factual_inf = {}
-    factual_part1 = os.path.join(args.shr_path, "shr_factual_part1.jsonl")
-    factual_part2 = os.path.join(args.shr_path, "shr_factual_part2.jsonl")
-    for line in open(factual_part1).readlines():
-        factual = json.loads(line)
-        image_id, factuals = list(factual.keys())[0], list(factual.values())[0]
-        factual_inf[image_id] = factuals
-    for line in open(factual_part2).readlines():
-        factual = json.loads(line)
-        image_id, factuals = list(factual.keys())[0], list(factual.values())[0]
-        factual_inf[image_id] = factuals
+    # setup_openai(args.api_key)
     
     # json file to be evaluated
-    json_file = json.load(open(args.json_file))
+    records = json.load(open(args.json_file))
     
     judgement = {}
     run_all = ['run1']
     for run in run_all:
         judgement[run] = {}
-    
-    _gram1, _gram2, _gram3, _gram4 = 0, 0, 0, 0
-    for _data in tqdm.tqdm(val_images):
-        image_id = _data["image_id"]
-        # ask model to describe the image
-        model_response = json_file[str(image_id)]
+
+    for i, record in enumerate(tqdm.tqdm(records)):
+
+        description = ""
+        instances = record["instances"]
+        for ins in instances:
+            description += f"{ins['bbox']}: {ins['category']}\n"
         
-        # get GPT judgement
-        description = get_desc(id2img, id2reg, int(image_id))
+        model_response = " ".join([conv["response"] for conv in record["conversations"]])
         model_cap_sep, is_repeated = get_model_cap(model_response)
-        # calculate repetition
-        gram1 = cal_repetition(model_response,1)
-        gram2 = cal_repetition(model_response,2)
-        gram3 = cal_repetition(model_response,3)
-        gram4 = cal_repetition(model_response,4)
-        _gram1 += gram1
-        _gram2 += gram2
-        _gram3 += gram3
-        _gram4 += gram4
-            
-        # skip gpt judgement 
-        if args.no_gpt_judge:
-            continue
-            
-        # GPT judgement
-        factual_text = ""
-        if str(image_id) in factual_inf:
-            for text in factual_inf[str(image_id)]:
-                factual_text += text
-                factual_text += "\n"
-        judge_prompt = GPT_JUDGE_PROMPT.format(description, factual_text, model_cap_sep)
+
+        judge_prompt = GPT_JUDGE_PROMPT.format(description, "\n".join(record["captions"]), model_cap_sep)
+        
         for run in run_all:
             while True:
-                judge = get_gpt_response(prompt=judge_prompt)
-                if "Judgement" in judge:
+                try:
+                    judge = openai.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
+                            {"role": "user", "content": judge_prompt}
+                        ],
+                        temperature=0.0,
+                    ).choices[0].message.content
+                except Exception as e:
+                    print(e)
+                    print('retrying...')
+                    time.sleep(10)
+                    continue
+                if "judgement" in judge.lower():
                     break
             # post-process
             final_judge = post_process_no_revise(judge, model_response)
-            judgement[run][image_id] = {
+            judgement[run][i] = {
                 "raw_judgement": judge,
                 "mode_response": model_response,
                 "judgement": final_judge,
             }
         
-    whole_sample_cnt = len(val_images)
-    if args.no_gpt_judge:
-        print(f"gram-1 repetition: {round(_gram1/whole_sample_cnt, 3)}")
-        print(f"gram-2 repetition: {round(_gram2/whole_sample_cnt, 3)}")
-        print(f"gram-3 repetition: {round(_gram3/whole_sample_cnt, 3)}")
-        print(f"gram-4 repetition: {round(_gram4/whole_sample_cnt, 3)}")
-    else:
-        base_eval_path = "./ha_dpo/shr_eval/shr_eval_results"
-        if not os.path.exists(base_eval_path):
-            os.mkdir(base_eval_path)
-        localtime = time.asctime( time.localtime(time.time()) ).replace(' ', '_')
-        # dump config file
-        eval_path = os.path.join(base_eval_path, localtime)
-        os.mkdir(eval_path)
-        # save metrics
-        metrics = {}
-        for run in run_all:
-            metrics[run] = {}
-            get_metric(judgement[run], metrics[run])
-        # repetition
-        metrics['gram-1-repetition'] = round(_gram1/whole_sample_cnt, 3)
-        metrics['gram-2-repetition'] = round(_gram2/whole_sample_cnt, 3)
-        metrics['gram-3-repetition'] = round(_gram3/whole_sample_cnt, 3)
-        metrics['gram-4-repetition'] = round(_gram4/whole_sample_cnt, 3)
-        # halucination ratio
-        metrics["mean_hal_ratio"] = round(
-            sum(metrics[run]["hal_sents_ratio"] for run in run_all)/len(run_all), 3
-        )
-        # dump judgement file
-        with open(os.path.join(base_eval_path, localtime, 'judgement.json'), "w") as f:
-            json.dump(judgement, f)
-        # dump metric file
-        with open(os.path.join(base_eval_path, localtime, 'metrics.json'), "w") as f:
-            json.dump(metrics, f)
+    whole_sample_cnt = len(records)
+   
+    os.makedirs(args.outdir, exist_ok=True)
+    localtime = time.asctime( time.localtime(time.time()) ).replace(' ', '_')
+    # save metrics
+    metrics = {}
+    for run in run_all:
+        metrics[run] = {}
+        get_metric(judgement[run], metrics[run])
+    
+    print(metrics)
+    # halucination ratio
+    metrics["mean_hal_ratio"] = round(
+        sum(metrics[run]["hal_sents_ratio"] for run in run_all)/len(run_all), 3
+    )
+    # dump judgement file
+    with open(os.path.join(args.outdir, 'judgement.json'), "w") as f:
+        json.dump(judgement, f)
+    # dump metric file
+    with open(os.path.join(args.outdir, 'metrics.json'), "w") as f:
+        json.dump(metrics, f)
