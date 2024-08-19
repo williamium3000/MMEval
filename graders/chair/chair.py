@@ -202,8 +202,8 @@ class CHAIR(object):
         num_hallucinated_caps = 0.
         hallucinated_word_count = 0.
         coco_word_count = 0.
-
-        output = {'sentences': []} 
+        
+        output = {'sentences': [], "mscoco_words": [], "mscoco_hallucinated_words": []} 
     
         for i, cap_eval in enumerate(caps):
     
@@ -236,15 +236,26 @@ class CHAIR(object):
                                    'CHAIRi': 0}
  
             #count hallucinated words
-            coco_word_count += len(node_words) 
+            coco_word_count += len(node_words)
             hallucinated = False
+            mscoco_words_i = []
+            mscoco_hallucinated_words_i = []
             for word, node_word, idx in zip(words, node_words, idxs):
+                mscoco_words_i.append((word, node_word))
                 if node_word not in gt_objects:
                     hallucinated_word_count += 1 
                     cap_dict['mscoco_hallucinated_words'].append((word, node_word))
                     cap_dict['hallucination_idxs'].append(idx)
+                    
+                    mscoco_hallucinated_words_i.append((word, node_word))
                     hallucinated = True      
-    
+
+            mscoco_words_i = list(set(mscoco_words_i))
+            mscoco_hallucinated_words_i = list(set(mscoco_hallucinated_words_i))
+            
+            output['mscoco_words'].extend(mscoco_words_i)
+            output['mscoco_hallucinated_words'].extend(mscoco_hallucinated_words_i)
+            
             #count hallucinated caps
             num_caps += 1
             if hallucinated:
@@ -259,7 +270,8 @@ class CHAIR(object):
  
         chair_s = (num_hallucinated_caps/num_caps)
         chair_i = (hallucinated_word_count/coco_word_count)
-    
+        chair_i_v2 = (len(output['mscoco_hallucinated_words'])/len(output['mscoco_words']))
+        
         output['overall_metrics'] = {
                                     # 'Bleu_1': self.metrics['Bleu_1'],
                                     #  'Bleu_2': self.metrics['Bleu_2'],
@@ -270,7 +282,8 @@ class CHAIR(object):
                                     #  'SPICE': self.metrics['SPICE'],
                                     #  'ROUGE_L': self.metrics['ROUGE_L'],
                                      'CHAIRs': chair_s,
-                                     'CHAIRi': chair_i
+                                     'CHAIRi': chair_i,
+                                     "CHAIRi_v2": chair_i_v2
                                      }
     
         return output 
@@ -296,16 +309,17 @@ def save_hallucinated_words(cap_file, cap_dict):
 
 def print_metrics(hallucination_cap_dict, quiet=False):
     sentence_metrics = hallucination_cap_dict['overall_metrics']
-    metric_string = "%0.01f\t%0.01f" %(
+    metric_string = "%0.01f\t%0.01f\t%0.01f" %(
                                                 #   sentence_metrics['SPICE']*100,
                                                 #   sentence_metrics['METEOR']*100,
                                                 #   sentence_metrics['CIDEr']*100,
                                                   sentence_metrics['CHAIRs']*100,
-                                                  sentence_metrics['CHAIRi']*100
+                                                  sentence_metrics['CHAIRi']*100,
+                                                  sentence_metrics['CHAIRi_v2']*100
                                                   )
 
     if not quiet:
-        print("CHAIRs\tCHAIRi")
+        print("CHAIRs\tCHAIRi\tCHAIRi_v2")
         print(metric_string)
 
     else:

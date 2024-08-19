@@ -16,5 +16,5 @@ for sample in samples:
     sample["caption"] = " ".join(responses)
 
 filename = os.path.basename(args.json)
-
+os.makedirs("graders/chair/output", exist_ok=True)
 json.dump(samples, open(os.path.join("graders/chair/output", filename), 'w'), indent=4)
