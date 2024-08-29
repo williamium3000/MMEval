@@ -92,34 +92,38 @@ if __name__ == '__main__':
     with open(args.response, 'r') as f:
         records = json.load(f)
 
-    # ask GPT-4 to evaluate
-    responses = []
-    for i, record in enumerate(records):
-        image_content = format_case_coco(record)
-        for one_round_conv in record['conversations']:
-            input_text = template.format(image_content, one_round_conv['prompt'], one_round_conv['response'], one_round_conv['gt'])
-            # print(input_text)
+    if args.evaluation is not None and os.path.exists(args.evaluation):
+        with open(args.evaluation, 'r') as f:
+            responses = json.load(f)
+    else:
+        # ask GPT-4 to evaluate
+        responses = []
+        for i, record in enumerate(records):
+            image_content = format_case_coco(record)
+            for one_round_conv in record['conversations']:
+                input_text = template.format(image_content, one_round_conv['prompt'], one_round_conv['response'], one_round_conv['gt'])
+                # print(input_text)
 
-            response = None
-            while response is None:
-                try:
-                    response = openai.chat.completions.create(
-                        model=args.gpt_model,
-                        messages=[
-                            {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
-                            {"role": "user", "content": input_text}
-                        ],
-                        temperature=0.0,
-                    )
-                except Exception as e:
-                    print(e)
-                    print('retrying...')
-                    time.sleep(10)
-                    continue
+                response = None
+                while response is None:
+                    try:
+                        response = openai.chat.completions.create(
+                            model=args.gpt_model,
+                            messages=[
+                                {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
+                                {"role": "user", "content": input_text}
+                            ],
+                            temperature=0.0,
+                        )
+                    except Exception as e:
+                        print(e)
+                        print('retrying...')
+                        time.sleep(10)
+                        continue
 
-            print(i, response.choices[0].message.content, flush=True)
-            responses.append(response.choices[0].message.content)
-            time.sleep(1)
+                print(i, response.choices[0].message.content, flush=True)
+                responses.append(response.choices[0].message.content)
+                time.sleep(0.1)
 
     # save responses
     os.makedirs(os.path.dirname(args.evaluation), exist_ok=True)

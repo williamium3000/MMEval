@@ -203,7 +203,12 @@ class CHAIR(object):
         hallucinated_word_count = 0.
         coco_word_count = 0.
         
-        output = {'sentences': [], "mscoco_words": [], "mscoco_hallucinated_words": []} 
+        output = {
+            'sentences': [], "mscoco_words": [], 
+            "mscoco_hallucinated_words": [],
+            "object_in_gts": [],
+            "gt_objects": [],
+            "coverage": []} 
     
         for i, cap_eval in enumerate(caps):
     
@@ -240,6 +245,8 @@ class CHAIR(object):
             hallucinated = False
             mscoco_words_i = []
             mscoco_hallucinated_words_i = []
+            object_in_gts = []
+            
             for word, node_word, idx in zip(words, node_words, idxs):
                 mscoco_words_i.append((word, node_word))
                 if node_word not in gt_objects:
@@ -248,13 +255,19 @@ class CHAIR(object):
                     cap_dict['hallucination_idxs'].append(idx)
                     
                     mscoco_hallucinated_words_i.append((word, node_word))
-                    hallucinated = True      
+                    hallucinated = True    
+                else:
+                    object_in_gts.append(node_word)
 
             mscoco_words_i = list(set(mscoco_words_i))
             mscoco_hallucinated_words_i = list(set(mscoco_hallucinated_words_i))
             
             output['mscoco_words'].extend(mscoco_words_i)
             output['mscoco_hallucinated_words'].extend(mscoco_hallucinated_words_i)
+            output['object_in_gts'].extend(list(set(object_in_gts)))
+            output['gt_objects'].extend(gt_objects)
+            if len(gt_objects) > 0:
+                output["coverage"].append(len(list(set(object_in_gts))) / len(gt_objects))
             
             #count hallucinated caps
             num_caps += 1
@@ -270,8 +283,9 @@ class CHAIR(object):
  
         chair_s = (num_hallucinated_caps/num_caps)
         chair_i = (hallucinated_word_count/coco_word_count)
-        chair_i_v2 = (len(output['mscoco_hallucinated_words'])/len(output['mscoco_words']))
-        
+        chair_i_v2 = len(output['mscoco_hallucinated_words'])/len(output['mscoco_words'])
+        coverage_avg = np.mean(output["coverage"])
+        coverage_all = len(output['object_in_gts']) / len(output['gt_objects'])
         output['overall_metrics'] = {
                                     # 'Bleu_1': self.metrics['Bleu_1'],
                                     #  'Bleu_2': self.metrics['Bleu_2'],
@@ -281,9 +295,11 @@ class CHAIR(object):
                                     #  'CIDEr': self.metrics['CIDEr'],
                                     #  'SPICE': self.metrics['SPICE'],
                                     #  'ROUGE_L': self.metrics['ROUGE_L'],
-                                     'CHAIRs': chair_s,
-                                     'CHAIRi': chair_i,
-                                     "CHAIRi_v2": chair_i_v2
+                                        'CHAIRs': chair_s,
+                                        'CHAIRi': chair_i,
+                                        "CHAIRi_v2": chair_i_v2,
+                                        "Coverage_avg": coverage_avg,
+                                        "Coverage_all": coverage_all
                                      }
     
         return output 
@@ -309,17 +325,19 @@ def save_hallucinated_words(cap_file, cap_dict):
 
 def print_metrics(hallucination_cap_dict, quiet=False):
     sentence_metrics = hallucination_cap_dict['overall_metrics']
-    metric_string = "%0.01f\t%0.01f\t%0.01f" %(
+    metric_string = "%0.01f\t%0.01f\t%0.01f\t%0.01f\t%0.01f" %(
                                                 #   sentence_metrics['SPICE']*100,
                                                 #   sentence_metrics['METEOR']*100,
                                                 #   sentence_metrics['CIDEr']*100,
-                                                  sentence_metrics['CHAIRs']*100,
-                                                  sentence_metrics['CHAIRi']*100,
-                                                  sentence_metrics['CHAIRi_v2']*100
+                                                    sentence_metrics['CHAIRs']*100,
+                                                    sentence_metrics['CHAIRi']*100,
+                                                    sentence_metrics['CHAIRi_v2']*100,
+                                                    sentence_metrics['Coverage_avg']*100,
+                                                    sentence_metrics['Coverage_all']*100
                                                   )
 
     if not quiet:
-        print("CHAIRs\tCHAIRi\tCHAIRi_v2")
+        print("CHAIRs\tCHAIRi\tCHAIRi_v2\tCoverage-avg\tCoverage-all")
         print(metric_string)
 
     else:
