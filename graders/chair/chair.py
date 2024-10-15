@@ -4,7 +4,10 @@ import nltk
 import json
 from pattern.en import singularize
 import argparse
-from misc import *
+import os
+import sys
+import json
+import numpy as np
 
 lemma = nltk.wordnet.WordNetLemmatizer()
 
