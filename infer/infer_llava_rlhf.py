@@ -23,6 +23,8 @@ import tqdm
 from transformers import AutoTokenizer
 from peft import PeftModel
 from PIL import Image
+import requests
+from io import BytesIO
 
 
 
@@ -77,7 +79,7 @@ def eval_model(tokenizer, model, image_processor, image_file, query):
             temperature=0.0,
             top_p=None,
             num_beams=1,
-            max_new_tokens=10240,
+            max_new_tokens=256,
             use_cache=True,
         )
 
@@ -151,7 +153,18 @@ if __name__ == "__main__":
 
     for sample in tqdm.tqdm(samples):
         q = sample["question"]
-        image_file = os.path.join(args.img_dir, sample["image"])
+        
+        # Check if image is a URL
+        if sample["image"].startswith(('http://', 'https://')):
+            # Load image from URL
+            response = requests.get(sample["image"], timeout=10)
+            response.raise_for_status()
+            image_file = Image.open(BytesIO(response.content)).convert('RGB')
+        else:
+            # Load image from local path
+            image_file = os.path.join(args.img_dir, sample["image"])
+            image_file = Image.open(image_file).convert('RGB')
+        
         output = eval_model(tokenizer, model, image_processor, context_len, type('Args', (), {
                                 "model_path": model_path,
                                 "model_base": None,

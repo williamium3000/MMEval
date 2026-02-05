@@ -7,20 +7,41 @@ import tqdm
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoTokenizer, AutoProcessor
 from qwen_vl_utils import process_vision_info
 import torch
+import copy
 
-def eval_model(processor, model, image_file, query):
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "image": image_file,
-                },
-                {"type": "text", "text": query},
-            ],
-        }
-    ]
+def eval_model(processor, model, image_file, query, conversation_history=None):
+    # Track whether conversation_history was originally None to determine return type
+    was_none = conversation_history is None
+    
+    if conversation_history is not None and len(conversation_history) > 0:
+        # Use existing conversation history and append new user message
+        # Only include text query in later rounds (image already in conversation history)
+        conversation_history = copy.deepcopy(conversation_history)
+        conversation_history.append(
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": query},
+                ],
+            }
+        )
+    else:
+        # Initialize conversation_history as a new list if it's None or empty
+        # Include image only in the first round
+        conversation_history = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "image": image_file,
+                    },
+                    {"type": "text", "text": query},
+                ],
+            }
+        ]
+    
+    messages = conversation_history
 
     # Preparation for inference
     text = processor.apply_chat_template(
@@ -44,7 +65,16 @@ def eval_model(processor, model, image_file, query):
     output_text = processor.batch_decode(
         generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
     )[0]
-    return output_text
+    
+    # Return tuple only if conversation_history was originally provided (not None)
+    if not was_none:
+        conversation_history.append({
+            "role": "assistant",
+            "content": output_text
+        })
+        return output_text, conversation_history
+    else:
+        return output_text
 
 
 

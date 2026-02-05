@@ -52,41 +52,46 @@ def load_model(args):
         )
         model.to(device)
         return partial(eval_model_blip2, model=model, processor=processor)
+    elif "Qwen3-VL" in args.model_path:
+        from .infer_qwenvl3 import eval_model as eval_model_qwenvl3
+        from transformers import Qwen3VLMoeForConditionalGeneration, AutoProcessor
+        model = Qwen3VLMoeForConditionalGeneration.from_pretrained(
+            args.model_path, dtype="auto", device_map="auto", trust_remote_code=True
+        )
+        processor = AutoProcessor.from_pretrained(args.model_path)
+        return partial(eval_model_qwenvl3, processor=processor, model=model)
     elif "Qwen2.5-VL" in args.model_path:
         from .infer_qwenvl2d5 import eval_model as eval_model_qwenvl2d5
         from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             args.model_path, torch_dtype="auto", device_map="auto"
         )
-
-        # We recommend enabling flash_attention_2 for better acceleration and memory saving, especially in multi-image and video scenarios.
-        # model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-        #     "Qwen/Qwen2.5-VL-3B-Instruct",
-        #     torch_dtype=torch.bfloat16,
-        #     attn_implementation="flash_attention_2",
-        #     device_map="auto",
-        # )
-
-        # default processer
         processor = AutoProcessor.from_pretrained(args.model_path)
-        return partial(eval_model_qwenvl2d5, model=model, processor=processor)
-    elif "Qwen3-VL" in args.model_path:
-        from .infer_qwenvl3 import eval_model as eval_model_qwenvl3
-        if "A" in args.model_path:
-            from transformers import Qwen3VLMoeForConditionalGeneration, AutoProcessor
-            model = Qwen3VLMoeForConditionalGeneration.from_pretrained(
-                args.model_path, torch_dtype="auto", device_map="auto"
-            )
+        
+        # Conditionally use conversation wrapper based on use_conversation flag
+        use_conversation = getattr(args, 'use_conversation', False)
+        
+        if use_conversation:
+            # Return wrapper that manages conversation history
+            class Qwen25VLConversationWrapper:
+                def __init__(self, processor, model):
+                    self.processor = processor
+                    self.model = model
+                    self.conversation_history = []
+                
+                def __call__(self, image_file, query):
+                    output, self.conversation_history = eval_model_qwenvl2d5(
+                        self.processor, self.model, image_file, query, self.conversation_history
+                    )
+                    return output
+                
+                def reset(self):
+                    self.conversation_history = []
             
+            return Qwen25VLConversationWrapper(processor=processor, model=model)
         else:
-            from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
-            model = Qwen3VLForConditionalGeneration.from_pretrained(
-                args.model_path, torch_dtype="auto", device_map="auto"
-            )
-
-        # default processer
-        processor = AutoProcessor.from_pretrained(args.model_path)
-        return partial(eval_model_qwenvl3, model=model, processor=processor)
+            # Return simple function without conversation history
+            return partial(eval_model_qwenvl2d5, processor=processor, model=model, conversation_history=None)
     elif "Qwen2-VL" in args.model_path:
         from .infer_qwenvl2 import eval_model as eval_model_qwenvl2
         from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
@@ -148,12 +153,35 @@ def load_model(args):
             ) 
         return partial(eval_model_phi3d5vl, model=model, processor=processor)
     elif "gemma-3" in args.model_path:
-        from .infer_gemma3 import eval_model as eval_model_gemma3
-        from transformers import AutoProcessor, Gemma3ForConditionalGeneration
-        model = Gemma3ForConditionalGeneration.from_pretrained(args.model_path, device_map="auto").eval()
-        processor = AutoProcessor.from_pretrained(args.model_path)
-        
-        return partial(eval_model_gemma3, model=model, processor=processor)
+            from .infer_gemma3 import eval_model as eval_model_gemma3
+            from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+            model = Gemma3ForConditionalGeneration.from_pretrained(args.model_path, device_map="auto").eval()
+            processor = AutoProcessor.from_pretrained(args.model_path)
+            
+            # Conditionally use conversation wrapper based on use_conversation flag
+            use_conversation = getattr(args, 'use_conversation', False)
+            
+            if use_conversation:
+                # Return wrapper that manages conversation history
+                class Gemma3ConversationWrapper:
+                    def __init__(self, processor, model):
+                        self.processor = processor
+                        self.model = model
+                        self.conversation_history = []
+                    
+                    def __call__(self, image_file, query):
+                        output, self.conversation_history = eval_model_gemma3(
+                            self.processor, self.model, image_file, query, self.conversation_history
+                        )
+                        return output
+                    
+                    def reset(self):
+                        self.conversation_history = []
+                
+                return Gemma3ConversationWrapper(processor=processor, model=model)
+            else:
+                # Return simple function without conversation history
+                return partial(eval_model_gemma3, processor=processor, model=model, conversation_history=None)
     elif "Intern" in args.model_path:
         from .infer_internvl3 import eval_model as eval_model_internvl3, split_model
         from transformers import AutoModel, AutoTokenizer
@@ -167,7 +195,31 @@ def load_model(args):
             trust_remote_code=True,
             device_map=device_map).eval()
         tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True, use_fast=False)
-        return partial(eval_model_internvl3, model=model, tokenizer=tokenizer)
+        
+        # Conditionally use conversation wrapper based on use_conversation flag
+        use_conversation = getattr(args, 'use_conversation', False)
+        
+        if use_conversation:
+            # Return wrapper that manages conversation history
+            class InternVL3ConversationWrapper:
+                def __init__(self, model, tokenizer):
+                    self.model = model
+                    self.tokenizer = tokenizer
+                    self.conversation_history = []
+                
+                def __call__(self, image_file, query):
+                    output, self.conversation_history = eval_model_internvl3(
+                        self.model, self.tokenizer, image_file, query, self.conversation_history
+                    )
+                    return output
+                
+                def reset(self):
+                    self.conversation_history = []
+            
+            return InternVL3ConversationWrapper(model=model, tokenizer=tokenizer)
+        else:
+            # Return simple function without conversation history
+            return partial(eval_model_internvl3, model=model, tokenizer=tokenizer, conversation_history=None)
     elif "lpoi" in args.model_path:
         from .infer_lpoi import eval_model as eval_model_lpoi
         from transformers import AutoModelForVision2Seq, AutoProcessor

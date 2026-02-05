@@ -283,10 +283,28 @@ if __name__ == '__main__':
     
     data = json.load(open(args.cap_file, 'r'))
     for sample in data:
-        responses = [conv["response"] for conv in sample["conversations"]]
-        sample["caption"] = " ".join(responses)
-        for k, v in sample["metadata"].items():
-            sample[k] = v
+        # Create caption from conversations
+        if "conversations" in sample:
+            responses = [conv["response"] for conv in sample["conversations"]]
+            sample["caption"] = " ".join(responses)
+        elif "caption" not in sample:
+            raise ValueError(f"No caption found for sample {sample}")
+        
+        # Handle metadata: if metadata exists, copy fields to top level
+        # Otherwise, assume fields are already at top level (like in caption files)
+        if "metadata" in sample:
+            for k, v in sample["metadata"].items():
+                sample[k] = v
+        
+        # Ensure required fields exist (with defaults if missing)
+        if "objects" not in sample:
+            sample["objects"] = []
+        if "attributes" not in sample:
+            sample["attributes"] = []
+        if "relationships" not in sample:
+            sample["relationships"] = []
+        if "regions" not in sample:
+            sample["regions"] = []
         
     chair_result = compute_chair(data, stemmed_object_dict)
     print_metrics(chair_result)

@@ -8,6 +8,8 @@ import torchvision.transforms as T
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
 from transformers import AutoModel, AutoTokenizer, AutoConfig
+import requests
+from io import BytesIO
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -84,12 +86,50 @@ def load_image(image_file, input_size=448, max_num=12):
     pixel_values = torch.stack(pixel_values)
     return pixel_values
 
-def eval_model(model, tokenizer, image_file, query):
-    query = f'<image>\n{query}'
-    pixel_values = load_image(image_file, max_num=12).to(torch.bfloat16).cuda()
-    generation_config = dict(max_new_tokens=1024, do_sample=True)
-    response = model.chat(tokenizer, pixel_values, query, generation_config)
-    return response
+def eval_model(model, tokenizer, image_file, query, conversation_history=None):
+    """
+    Evaluate model with support for multi-turn conversations.
+    Referenced from: https://huggingface.co/OpenGVLab/InternVL3-2B-Pretrained
+    
+    Args:
+        model: The InternVL3 model
+        tokenizer: The tokenizer
+        image_file: Path to the image file or PIL Image
+        query: The user query/question
+        conversation_history: Optional conversation history from previous turns.
+                            If None, starts a new conversation.
+    
+    Returns:
+        str or tuple: If conversation_history was None, returns just the response string.
+                     Otherwise, returns (response, updated_conversation_history).
+    """
+    # Track whether conversation_history was originally None to determine return type
+    was_none = conversation_history is None
+    
+    generation_config = dict(max_new_tokens=1024, do_sample=False)
+    
+    # For multi-round conversation, pass history and get it back
+    # Reference: single-image multi-round conversation from official docs
+    if not was_none:
+        # Use existing conversation history
+        # In later rounds, only send text query (no image token, no image processing)
+        # InternVL3's chat API signature: model.chat(tokenizer, pixel_values, query, generation_config, history, return_history)
+        # We pass None for pixel_values in later rounds to follow image visibility rule.
+        # If InternVL3 requires pixel_values even in later rounds, the conversation wrapper
+        # in loader.py should be updated to store pixel_values from first round.
+        query_text = query  # Only text, no <image> token
+        response, conversation_history = model.chat(
+            tokenizer, None, query_text, generation_config,
+            history=conversation_history, return_history=True
+        )
+        return response, conversation_history
+    else:
+        # Start new conversation (history will be None)
+        # First round: include image token and process image
+        query_with_image = f'<image>\n{query}'
+        pixel_values = load_image(image_file, max_num=12).to(torch.bfloat16).cuda()
+        response = model.chat(tokenizer, pixel_values, query_with_image, generation_config)
+        return response
 
 def split_model(model_name):
     device_map = {}
@@ -152,7 +192,18 @@ if __name__ == "__main__":
 
     for sample in tqdm.tqdm(samples):
         q = sample["question"]
-        image_file = os.path.join(args.img_dir, sample["image"])
+        
+        # Check if image is a URL
+        if sample["image"].startswith(('http://', 'https://')):
+            # Load image from URL
+            response = requests.get(sample["image"], timeout=10)
+            response.raise_for_status()
+            image_file = Image.open(BytesIO(response.content)).convert('RGB')
+        else:
+            # Load image from local path
+            image_file = os.path.join(args.img_dir, sample["image"])
+            image_file = Image.open(image_file).convert('RGB')
+        
         output = eval_model(model, tokenizer, image_file, q)
         
         output = output.strip().replace(".", '').lower()

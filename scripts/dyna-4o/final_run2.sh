@@ -41,7 +41,7 @@ conda activate work_dirs/envs/llava
 # conda activate work_dirs/envs/llava
 python $RUN_FILE \
 --dataset vg --model_path data/checkpoints/LLaVA-RLHF-13b-v1.5-336 \
---outfile $SAVE_DIR/LLaVA-RLHF-13b-v1.5-336.json \
+--outfile $SAVE_DIR/LLaVA-RLHF-13b-v1.5-336_128tokens.json \
 --num_samples $NUM_SAMPLES
 
 # (
@@ -69,7 +69,7 @@ python $RUN_FILE \
 #     --num_samples $NUM_SAMPLES
 
 
-# conda activate work_dirs/envs/opera
+# conda activate opera
 
 # python $RUN_FILE \
 #     --dataset vg --model_path opera/llava-1.5 \

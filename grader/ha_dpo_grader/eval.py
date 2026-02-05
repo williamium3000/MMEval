@@ -3,7 +3,7 @@ import json
 import tqdm
 import argparse
 from PIL import Image
-import openai
+from openai import OpenAI
 import time
 
 from shr_utils import *
@@ -43,6 +43,11 @@ def parse_args():
     # parser.add_argument("--api-key", type=str, required=True, help="key to the OPENAI API.")
     parser.add_argument("json_file", type=str, help="path to the json file, where model responses are stored.")
     parser.add_argument('--outdir', type=str, default=None, help='GPT-4 evaluation results to be saved')
+    parser.add_argument('--api-url', type=str, default=None,
+                       help='API endpoint URL (e.g., http://localhost:8003/v1). Overrides OPENAI_BASE_URL env var.')
+    parser.add_argument('--api-key', type=str, default=None,
+                       help='API authorization key. Overrides OPENAI_API_KEY env var.')
+    parser.add_argument('--gpt-model', type=str, default='gpt-4o', help='Model name to use for evaluation')
     args = parser.parse_args()
 
     return args
@@ -51,8 +56,29 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     
-    # setup openai
-    # setup_openai(args.api_key)
+    # Setup OpenAI client - use args if provided, otherwise fall back to env vars
+    api_key = args.api_key if args.api_key else os.getenv("OPENAI_API_KEY")
+    base_url = args.api_url if args.api_url else os.getenv("OPENAI_BASE_URL")
+    
+    # Initialize OpenAI client
+    # If base_url is provided, ensure it ends with /v1 (OpenAI client adds /chat/completions)
+    if base_url:
+        if base_url.endswith('/chat/completions'):
+            base_url = base_url.replace('/chat/completions', '')
+        if not base_url.endswith('/v1'):
+            base_url = base_url.rstrip('/') + '/v1'
+    
+    # Initialize client - only pass parameters that are set
+    # For local vLLM (base_url set but no api_key), use a dummy key (vLLM ignores it)
+    client_kwargs = {}
+    if base_url:
+        client_kwargs['base_url'] = base_url
+        # Local vLLM doesn't require API key, but OpenAI client needs one, so use dummy
+        client_kwargs['api_key'] = api_key if api_key else "dummy-key"
+    elif api_key:
+        client_kwargs['api_key'] = api_key
+    
+    client = OpenAI(**client_kwargs) if client_kwargs else OpenAI()
     
     # json file to be evaluated
     records = json.load(open(args.json_file))
@@ -72,8 +98,8 @@ if __name__ == '__main__':
         for run in run_all:
             while True:
                 try:
-                    judge = openai.chat.completions.create(
-                        model="gpt-4o",
+                    judge = client.chat.completions.create(
+                        model=args.gpt_model,
                         messages=[
                             {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
                             {"role": "user", "content": judge_prompt}

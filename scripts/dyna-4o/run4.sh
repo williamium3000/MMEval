@@ -61,7 +61,7 @@ conda activate /raid/miniconda3/envs/qwenvl
 #     --num_samples $NUM_SAMPLES
 
 
-# conda activate work_dirs/envs/opera
+# conda activate opera
 
 # python $RUN_FILE \
 #     --dataset vg --model_path opera/llava-1.5 \

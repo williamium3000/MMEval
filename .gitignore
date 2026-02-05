@@ -169,3 +169,5 @@ work_dirs
 grader/HaELM/llama-7b-hf
 grader/HaELM/checkpoint
 grader/easydetect/weights
+
+tmp

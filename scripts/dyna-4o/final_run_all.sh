@@ -57,7 +57,7 @@ python $RUN_FILE \
 
 # ===== LLaVA Series =====
 # Env: llava
-conda activate /raid/william/project/context-eval-mllm/work_dirs/envs/llava
+conda activate work_dirs/envs/llava
 
 python $RUN_FILE \
     --dataset vg --model_path llava-hf/llava-1.5-7b-hf  \
@@ -111,7 +111,7 @@ python $RUN_FILE \
 
 # ===== InternVL2 Series =====
 # Env: internvl
-conda activate /raid/william/project/context-eval-mllm/work_dirs/envs/internvl
+conda activate work_dirs/envs/internvl
 
 python $RUN_FILE \
     --dataset vg --model_path OpenGVLab/InternVL2-2B  \
@@ -164,7 +164,7 @@ python $RUN_FILE \
 
 # ===== BLIP2 Series =====
 # Env: blip2_flan_t5
-conda activate /raid/william/project/context-eval-mllm/work_dirs/envs/flan_t5
+conda activate work_dirs/envs/flan_t5
 
 python $RUN_FILE \
     --dataset vg --model_path Salesforce/blip2-flan-t5-xl  \
@@ -178,7 +178,7 @@ python $RUN_FILE \
 
 # ===== InstructBLIP Series =====
 # Env: instructblip
-conda activate /raid/william/project/context-eval-mllm/work_dirs/envs/instructblip
+conda activate work_dirs/envs/instructblip
 
 python $RUN_FILE \
     --dataset vg --model_path Salesforce/instructblip-vicuna-7b  \

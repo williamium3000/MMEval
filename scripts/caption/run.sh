@@ -12,7 +12,7 @@
 # mkdir -p slurm_logs
 # conda activate llava
 export PYTHONPATH=$PYTHONPATH:./:infer:grader/easydetect
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=6
 
 NUM_SAMPLES=100
 SAVE_DIR=work_dirs/vg/caption
