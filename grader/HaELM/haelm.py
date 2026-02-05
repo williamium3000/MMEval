@@ -1,46 +1,63 @@
 import argparse
 import torch
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
 import json
-import tqdm
-import re
 
 
-def parse_gpt_oss_stream(text):
-    """
-    Parse gpt-oss style return logs into a list of extracted messages.
-    Extracts the assistant final <|message|> contents.
-    """
-    # Regex: match blocks like <|channel|>final<|message|>yes<|end|>
-    pattern = re.compile(r"<\|channel\|>final<\|message\|>(.*?)<\|end\|>")
-    matches = pattern.findall(text)
-    return [m.strip() for m in matches]
+if torch.cuda.is_available():
+    device = "cuda"
+else:
+    device = "cpu"
+
+
+def load_model(args, tokenizer):
+    model = LlamaForCausalLM.from_pretrained(
+        args.llama_path,
+        load_in_8bit=False,
+        torch_dtype=torch.float16,
+        device_map="auto",
+    )
+
+    model = PeftModel.from_pretrained(
+        model,
+        args.checkpoint_path,
+        force_download=True,
+        torch_dtype=torch.float16,
+    )
+
+    model.config.pad_token_id = tokenizer.pad_token_id = 0
+    model.config.bos_token_id = 1
+    model.config.eos_token_id = 2
+
+    model.eval()
+    if torch.__version__ >= "2":
+        model = torch.compile(model)
+    return model
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # parser.add_argument('--caption', type=str, default='data/vg.json')
     parser.add_argument('--conv', type=str, default='output/vg/icl.json')
-    parser.add_argument("--checkpoint_path", type=str, default="/home/ubuntu/william/repo/LLaMA-Factory/saves/qwen2d5-7b/lora/merged")
+    parser.add_argument("--llama_path", type=str, default="checkpoints/llama-7b-hf")
+    parser.add_argument("--checkpoint_path", type=str, default="grader/HaELM/checkpoint")
     parser.add_argument('--outfile', type=str, default='output/vg/icl_haelm.json')
+    parser.add_argument('--sample_num', type=int, default=100)
 
     args = parser.parse_args()
 
-    if "qwen" in args.checkpoint_path:
-        model = AutoModelForCausalLM.from_pretrained(
-            args.checkpoint_path,
-            torch_dtype="auto",
-            device_map="auto"
-            )
-        tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path)
-    elif "gpt" in args.checkpoint_path:
-        pipe = pipeline(
-            "text-generation",
-            model=args.checkpoint_path,
-            torch_dtype="auto",
-            device_map="auto",
-        )
-    # caption_index = 0
+    tokenizer = LlamaTokenizer.from_pretrained(args.llama_path)
+    model = load_model(args, tokenizer)
+
+    generation_config = GenerationConfig(
+        temperature=0.1,
+        top_p=0.75,
+        top_k=40,
+        num_beams=4,
+    )
+
+    caption_index = 0
     # caption_info = json.load(open(args.caption, 'r'))
     # caption_dict = {}
     # for item in caption_info:
@@ -56,14 +73,14 @@ if __name__ == '__main__':
 
     sample_result = []
     sentence_result = []
-    for sample in tqdm.tqdm(conv_data):
+    for sample in conv_data[:args.sample_num]:
         result_list = []
         img_id = f'vg_{sample["image_id"]}'
         for conv in sample["conversations"]:
             # if img_id in caption_dict.keys():
             #     captions = caption_dict[img_id]["captions"]
             # else:
-            captions = [region["phrase"] for region in sample["metadata"]["regions"]]
+            captions = [region["phrase"] for region in sample["sg"]["regions"]]
 
             prompt_format = "reference captions:\n{ref}.\nour caption:\n{response}\nIs our caption accurate?\n"
             caption_str = '. '.join(captions)
@@ -73,40 +90,21 @@ if __name__ == '__main__':
             for respond_sentence in response_list:
                 if len(respond_sentence) > 0:
                     prompt = prompt_format.format(ref=caption_str, response=respond_sentence)
-                    
-                    if "qwen" in args.checkpoint_path:
-                        messages = [
-                            {"role": "system", "content": " You are a helpful assistant."},
-                            {"role": "user", "content": prompt}
-                        ]
-                        text = tokenizer.apply_chat_template(
-                            messages,
-                            tokenize=False,
-                            add_generation_prompt=True
+                    inputs = tokenizer(prompt, return_tensors="pt")
+                    input_ids = inputs["input_ids"].to(device)
+                    with torch.no_grad():
+                        generation_output = model.generate(
+                            input_ids=input_ids,
+                            generation_config=generation_config,
+                            return_dict_in_generate=True,
+                            output_scores=True,
+                            max_new_tokens=1,
                         )
-                        model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
-                        generated_ids = model.generate(
-                            **model_inputs,
-                            max_new_tokens=512
-                        )
-                        generated_ids = [
-                            output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-                        ]
+                    sentence = generation_output.sequences
+                    sentence = tokenizer.decode(sentence.tolist()[0], skip_special_tokens=True)
+                    result = sentence.split("\n")[-1].lower()
 
-                        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-                    elif "gpt" in args.checkpoint_path:
-                        messages = [
-                            {"role": "user", "content": prompt},
-                        ]
-                        response = pipe(
-                            messages,
-                            max_new_tokens=256,
-                            skip_special_tokens=False,)[0]['generated_text'][-1]["content"]
-                        response = parse_gpt_oss_stream(response)[0]
-                        
-                    result = response.split("\n")[-1].lower()
-                    print(result)
                     conv["accurate"].append(result)
                     result_list.append(result)
                     sentence_result.append(result)

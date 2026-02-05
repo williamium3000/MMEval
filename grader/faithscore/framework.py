@@ -1,4 +1,3 @@
-import openai
 import time
 from tqdm import tqdm
 import os
@@ -19,12 +18,12 @@ cur_path = os.path.join(cur_path, "faithscore")
 
 
 class FaithScore():
-    def __init__(self, vem_type, api_key=None, llava_path=None, tokenzier_path=None, use_llama=False, llama_path=None):
-        openai.api_key = api_key
+    def __init__(self, vem_type, api_key=None, openai_model=None, llava_path=None, tokenzier_path=None, use_llama=False, llama_path=None):
         max_seq_len = 500
         max_batch_size = 1
         self.client = OpenAI(api_key=api_key)
         self.use_llama = use_llama
+        self.openai_model = openai_model
 
         self.model_type = vem_type ### [ofa_ve, ofa, mplug, blip2, llava]
         model_list = ["ofa_ve", "ofa", "mplug", "blip2", "llava"]
@@ -44,12 +43,14 @@ class FaithScore():
         while True:
             try:
                 completion = self.client.chat.completions.create(
-                    model="gpt-3.5-turbo",
+                    model=self.openai_model,
                     messages=[
-                        {"role": "user",
-                         "content": pts},
+                        {
+                            "role": "user",
+                            "content": pts
+                         },
                     ],
-                    temperature=0.2,
+                    #temperature=0.2,
                 )
                 return completion.choices[0].message.content
             except Exception as e:
@@ -58,6 +59,7 @@ class FaithScore():
                 time.sleep(10)
 
     def stage1(self, answers):
+        result = []
         with open(os.path.join(cur_path, "prompts/prompt_label_des_ana.txt"), "r") as f:
             prompt_label_des_ana = f.read() + "\n\n"
 
@@ -75,7 +77,7 @@ class FaithScore():
     def stage2(self, labeled_sub_sen):
         all_texts = []
 
-        lens = [len(subs) for subs in labeled_sub_sen]
+        # lens = [len(subs) for subs in labeled_sub_sen]
         labeled_sub_sen = [subs for subs in labeled_sub_sen]
         for ss in labeled_sub_sen:
             desc = ""
@@ -117,6 +119,7 @@ class FaithScore():
                 if all_texts[idx] == "" or "Entities" not in r:
                     response.append(nons)
                 else:
+                    # print(r)
                     response.append(r)
 
         results = response
@@ -206,12 +209,13 @@ class FaithScore():
             model = LLaVA(self.llava_path)
 
         fact_scores = []
+        llm_judgments = [] 
         atomic_facts = [[f for f in sublist if f != ''] for sublist in atomic_facts]
         # lengths = [len([s for s in sublist if s != '']) for sublist in atomic_facts]
         lengths_2 = [len(sublist) for sublist in atomic_facts]
         flatten_attomic_facts = [item for sublist in atomic_facts for item in sublist if item != '']
-        images = [[images[i]]*lengths_2[i] for i in range(len(images))]
-        flattened_images = [item for sublist in images for item in sublist]
+        images_expanded = [[images[i]]*lengths_2[i] for i in range(len(images))]
+        flattened_images = [item for sublist in images_expanded for item in sublist]
         BS = 16
         for idx in tqdm(range(0, len(flatten_attomic_facts), BS)):
             facts = flatten_attomic_facts[idx:idx+BS]
@@ -237,11 +241,15 @@ class FaithScore():
                 #     output = mplug(image, prompt, model)
                 # if self.model_type == "blip2":
                 #     output = blip_2(image, prompt, model, vis_processors_blip_2)
-            for out in output:
-                if "yes" in out.lower():
-                    fact_scores.append(1)
-                else:
-                    fact_scores.append(0)
+            for i, out in enumerate(output):
+                score = 1 if "yes" in out.lower() else 0
+                fact_scores.append(score)
+                llm_judgments.append({
+                    "fact": facts[i],
+                    "prompt": prompts[i],
+                    "llm_response": out,
+                    "score": score
+                })
                 # fact_scores.append(fact_score)
                 # results[id] = sum(fact_score)/len(fact_score) if len(fact_score) > 0 else 0
 
@@ -262,10 +270,12 @@ class FaithScore():
             # checking_results.append(result)
 
         unflattented_fact_scores = []
+        unflattened_judgments = [] 
         results = {}
         index = 0
         for i, length in enumerate(lengths_2):
             unflattented_fact_scores.append(fact_scores[index:index+length])
+            unflattened_judgments.append(llm_judgments[index:index+length])
             results[i] = sum(unflattented_fact_scores[i])/length if length > 0 else 0
             index += length
             
@@ -279,20 +289,44 @@ class FaithScore():
         # instance_score = [sum([iiii for iii in ii for iiii in iii]) / len([iiii for iii in ii for iiii in iii]) if len([iiii for iii in ii for iiii in iii]) > 0 else 0 for ii in unflattented_fact_scores]
         # print("Overall score: ", sum(instance_score) / len(instance_score))
 
-        return sum(instance_score) / len(instance_score), unflattented_fact_scores, results
+        return sum(instance_score) / len(instance_score), unflattented_fact_scores, results, unflattened_judgments
     '''
     answers: a list of strings, each element in this list is an answer
     '''
 
-    def faithscore(self, answers, images):
+    def faithscore(self, answers, images, save_judgments_path=None):
         ## Stage 1: Sub-setence Identification
         labeld_sub_sen = self.stage1(answers)
         ### Stage 2: Atomic Fact Generation
         atomic_facts, Entities, Relations, Colors, Counting, Others = self.stage2(labeld_sub_sen)
         ### Stage 3: Verification
         # print(atomic_facts)
-        score, fact_scores, results = self.stage3(atomic_facts, images)
+        score, fact_scores, results, llm_judgments = self.stage3(atomic_facts, images)
         sentence_score, results_sentence = self.sentence_faithscore(Entities, Relations, Colors, Counting, Others, self.labeled_sub(labeld_sub_sen), fact_scores)
+        
+        if save_judgments_path:
+            import json
+            judgment_data = []
+            for i in range(len(answers)):
+                judgment_data.append({
+                    "sample_id": i,
+                    "answer": answers[i],
+                    "labeled_sub_sentence": labeld_sub_sen[i],
+                    "atomic_facts": {
+                        "entities": Entities[i],
+                        "relations": Relations[i],
+                        "colors": Colors[i],
+                        "counting": Counting[i],
+                        "others": Others[i]
+                    },
+                    "verification_judgments": llm_judgments[i],
+                    "fact_score": results[i],
+                    "sentence_score": results_sentence[i] if i in results_sentence else None
+                })
+            with open(save_judgments_path, 'w', encoding='utf-8') as f:
+                json.dump(judgment_data, f, ensure_ascii=False, indent=2)
+            print(f"LLM judgments saved to {save_judgments_path}")
+        
         return score, sentence_score
 
     def sentence_faithscore(self, Entities, Relations, Colors, Counting, Others, all_texts, fact_scores):
@@ -312,7 +346,7 @@ class FaithScore():
                     # tags.append(chunk.label())
 
                 if len(ent4sen) < 1:
-                    print(tags)
+                    # print(tags)
                     ent4sen.append("")
                     # exit()
                 
@@ -393,3 +427,118 @@ class FaithScore():
                         desc.append(ss[pos_seg[i - 1] + 3:pos_seg[i] - 1])
             all_texts.append(desc)
         return all_texts
+
+
+def merge_faithscore_results(judgment_files, output_path=None):
+    """
+    
+    Args:
+        judgment_files: result path, ['batch1.json', 'batch2.json']
+        output_path: save path
+    
+    Returns:
+        dict: all saved info
+    """
+    import json
+    
+    all_judgments = []
+    
+    for file_path in judgment_files:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            batch_data = json.load(f)
+            all_judgments.extend(batch_data)
+    
+    for i, item in enumerate(all_judgments):
+        item['sample_id'] = i
+    
+    # fact_score 
+    fact_scores = [item['fact_score'] for item in all_judgments]
+    overall_fact_score = sum(fact_scores) / len(fact_scores) if fact_scores else 0
+    
+    # sentence_score
+    sentence_scores = []
+    for item in all_judgments:
+        if item['sentence_score'] is not None:
+            if isinstance(item['sentence_score'], list):
+                if len(item['sentence_score']) > 0:
+                    sentence_scores.append(sum(item['sentence_score']) / len(item['sentence_score']))
+            else:
+                sentence_scores.append(item['sentence_score'])
+    overall_sentence_score = sum(sentence_scores) / len(sentence_scores) if sentence_scores else 0
+    
+    total_facts = 0
+    correct_facts = 0
+    for item in all_judgments:
+        for judgment in item.get('verification_judgments', []):
+            total_facts += 1
+            correct_facts += judgment.get('score', 0)
+    
+    result = {
+        'num_samples': len(all_judgments),
+        'overall_fact_score': overall_fact_score,
+        'overall_sentence_score': overall_sentence_score,
+        'total_atomic_facts': total_facts,
+        'correct_atomic_facts': correct_facts,
+        'atomic_fact_accuracy': correct_facts / total_facts if total_facts > 0 else 0,
+        'merged_from': judgment_files,
+        'samples': all_judgments
+    }
+    
+    if output_path:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        print(f"Merged results saved to {output_path}")
+    
+    print(f"\n=== Merged FaithScore Results ===")
+    print(f"Number of samples: {result['num_samples']}")
+    print(f"Overall Fact Score: {result['overall_fact_score']:.4f}")
+    print(f"Overall Sentence Score: {result['overall_sentence_score']:.4f}")
+    print(f"Total Atomic Facts: {result['total_atomic_facts']}")
+    print(f"Correct Atomic Facts: {result['correct_atomic_facts']}")
+    print(f"Atomic Fact Accuracy: {result['atomic_fact_accuracy']:.4f}")
+    
+    return result
+
+
+def recalculate_from_judgments(judgment_file):
+    """
+    recalculate score
+    Args:
+        judgment_file: save path
+    
+    Returns:
+        dict: recalculated result
+    """
+    import json
+    
+    with open(judgment_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    if 'samples' in data:
+        judgments = data['samples']
+    else:
+        judgments = data
+    
+    fact_scores = [item['fact_score'] for item in judgments]
+    overall_fact_score = sum(fact_scores) / len(fact_scores) if fact_scores else 0
+    
+    sentence_scores = []
+    for item in judgments:
+        if item['sentence_score'] is not None:
+            if isinstance(item['sentence_score'], list):
+                if len(item['sentence_score']) > 0:
+                    sentence_scores.append(sum(item['sentence_score']) / len(item['sentence_score']))
+            else:
+                sentence_scores.append(item['sentence_score'])
+    overall_sentence_score = sum(sentence_scores) / len(sentence_scores) if sentence_scores else 0
+    
+    print(f"\n=== Recalculated FaithScore ===")
+    print(f"Number of samples: {len(judgments)}")
+    print(f"Overall Fact Score: {overall_fact_score:.4f}")
+    print(f"Overall Sentence Score: {overall_sentence_score:.4f}")
+    
+    return {
+        'num_samples': len(judgments),
+        'overall_fact_score': overall_fact_score,
+        'overall_sentence_score': overall_sentence_score
+    }
