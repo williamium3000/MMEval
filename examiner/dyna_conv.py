@@ -41,9 +41,14 @@ def dyna_conv(args, case, llm_chat, eval_func):
     ]
     to_save = []
     r = 0
+    max_rounds = getattr(args, "max_rounds", None)  # None = no cap
     while True:
+        if max_rounds is not None and r >= max_rounds:
+            break
         message_evaluator = llm_chat.chat(conversations, None)
         
+        if message_evaluator is None:
+            break
         if "END" in message_evaluator:
             break
         
@@ -139,6 +144,8 @@ if __name__ == "__main__":
     parser.add_argument('--outfile', type=str)
     parser.add_argument('--cache_file', type=str, default=None, 
                        help='Cache file to store/load intermediate results for resuming')
+    parser.add_argument('--max_rounds', type=int, default=None,
+                       help='Max conversation rounds per sample (default: none). Use e.g. 20 to avoid very long runs and context truncation.')
     args = parser.parse_args()
 
     # Set default cache file if not provided

@@ -160,11 +160,13 @@ def compute_chair(caps, total_synsets):
 
         output['sentences'].append(cap_dict)
 
-    chair_s = (num_hallucinated_caps/num_caps)
-    chair_i = (hallucinated_word_count/vg_word_count)
-    chair_i_v2 = len(output['vg_hallucinated_words'])/len(output['vg_words'])
-    coverage_avg = np.mean(output["coverage"])
-    coverage_all = len(output['object_in_gts']) / len(output['gt_objects'])
+    chair_s = (num_hallucinated_caps / num_caps) if num_caps > 0 else 0.0
+    chair_i = (hallucinated_word_count / vg_word_count) if vg_word_count > 0 else 0.0
+    n_vg_words = len(output['vg_words'])
+    chair_i_v2 = (len(output['vg_hallucinated_words']) / n_vg_words) if n_vg_words > 0 else 0.0
+    coverage_avg = float(np.mean(output["coverage"])) if output["coverage"] else 0.0
+    n_gt = len(output['gt_objects'])
+    coverage_all = (len(output['object_in_gts']) / n_gt) if n_gt > 0 else 0.0
     output['overall_metrics'] = {
                                     'CHAIRs': chair_s,
                                     'CHAIRi': chair_i,
@@ -268,6 +270,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("cap_file", type=str)
     parser.add_argument("object_synsets", type=str)
+    parser.add_argument("--first_n", type=int, default=None,
+                        help="Only evaluate the first n items in the JSON")
     args = parser.parse_args()
     
     with open(args.object_synsets) as object_dict_file:
@@ -282,6 +286,9 @@ if __name__ == '__main__':
         stemmed_object_dict[ps.stem(word)] = (word, synset)
     
     data = json.load(open(args.cap_file, 'r'))
+    if args.first_n is not None:
+        data = data[: args.first_n]
+        print(f"Evaluating first {args.first_n} items only.")
     for sample in data:
         # Create caption from conversations
         if "conversations" in sample:

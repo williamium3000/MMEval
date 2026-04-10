@@ -171,3 +171,8 @@ grader/HaELM/checkpoint
 grader/easydetect/weights
 
 tmp
+=2.6.3
+archive
+out.json
+minigpt4
+tmp.py

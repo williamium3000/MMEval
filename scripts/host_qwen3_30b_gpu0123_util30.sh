@@ -1,52 +1,55 @@
 #!/bin/bash
-# Script to host Qwen3-30B-A3B-Instruct-2507 on GPUs 0,1 using vLLM
+# vLLM server for MMHAL local grading: 2 GPUs (4,5) at 30% utilization
+# Then run: bash scripts/graders/mmhal.sh --local work_dirs/vg/caption
 
 set -e
 
 # Configuration
 MODEL_PATH="Qwen/Qwen3-30B-A3B-Instruct-2507"
-GPUS="0,1"  # Use GPUs 0 and 1 for tensor parallelism
+GPUS="0,1"
 PORT=8004
-LOG_FILE="tmp/vllm_Qwen3-30B-A3B-Instruct-2507_${PORT}.log"
+GPU_UTIL=0.5
+TP_SIZE=2
+LOG_FILE="tmp/vllm_Qwen3-30B-A3B-Instruct-2507_${PORT}_gpu45_util30.log"
+
 
 # Create log directory
 mkdir -p tmp
 
 # Initialize conda
 eval "$(conda shell.bash hook)"
-conda activate verl  # Adjust to your vLLM environment
+conda activate verl
 
 export PYTHONPATH=./
 
 echo "=================================================================================="
-echo "Starting vLLM server for Qwen3-30B-A3B-Instruct-2507"
+echo "Starting vLLM server (MMHAL local)"
 echo "=================================================================================="
 echo "Model: $MODEL_PATH"
-echo "GPUs: $GPUS (tensor parallelism)"
+echo "GPUs: $GPUS (tensor-parallel-size $TP_SIZE)"
+echo "GPU memory utilization: ${GPU_UTIL}"
 echo "Port: $PORT"
 echo "Log: $LOG_FILE"
 echo ""
 
-# Start vLLM server in background on GPUs 0 and 1
-echo "Starting vLLM server on GPUs $GPUS with tensor parallelism..."
+echo "Starting vLLM server (VLLM_USE_SYMM_MEM=0)..."
 (
     export CUDA_VISIBLE_DEVICES=$GPUS
-    TORCH_SYMM_MEM_DISABLE_MULTICAST=1 python -m vllm.entrypoints.openai.api_server \
+    python -m vllm.entrypoints.openai.api_server \
         --model "$MODEL_PATH" \
         --port "$PORT" \
         --host "0.0.0.0" \
-        --gpu-memory-utilization 0.45 \
-        --tensor-parallel-size 2 \
+        --gpu-memory-utilization "$GPU_UTIL" \
+        --tensor-parallel-size "$TP_SIZE" \
         > "$LOG_FILE" 2>&1
 ) &
 
 VLLM_PID=$!
-echo "vLLM server started (PID: $VLLM_PID) on port $PORT using GPUs $GPUS"
+echo "vLLM server started (PID: $VLLM_PID) on port $PORT"
 echo ""
 
-# Wait for server to be ready
 echo "Waiting for server to be ready..."
-max_attempts=300  # 4 minutes timeout for large model
+max_attempts=120
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
     if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
@@ -56,10 +59,11 @@ while [ $attempt -lt $max_attempts ]; do
         echo "Server is running!"
         echo "=================================================================================="
         echo "Endpoint: http://localhost:$PORT/v1/chat/completions"
-        echo "API Key: lgms_sk_live"
         echo ""
-        echo "To stop the server, run: kill $VLLM_PID"
-        echo "To view logs: tail -f $LOG_FILE"
+        echo "Run MMHAL with: bash scripts/graders/mmhal.sh --local work_dirs/vg/caption"
+        echo ""
+        echo "To stop: kill $VLLM_PID"
+        echo "Logs:    tail -f $LOG_FILE"
         echo "=================================================================================="
         break
     fi
@@ -77,5 +81,4 @@ if [ $attempt -eq $max_attempts ]; then
     exit 1
 fi
 
-# Keep script running
 wait $VLLM_PID

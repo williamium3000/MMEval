@@ -17,6 +17,30 @@ load_dotenv(".env")
 # For VG datasets: Extracts object names from sg.objects field
 # Output format: "cat, dog, person, car" (comma-separated unique objects)
 
+
+def _image_info_like_examiner(record):
+    """
+    Compose image information exactly as in examiner/dyna_conv_v18.py
+    (format_case_vg(case) for VG, format_case_coco(case) for COCO).
+    Returns the same string used as "Image information" in dyna_conv_v18 prompts.
+    Used for --gt-type caption: both Image Contents and gt (standard answer) use this.
+    """
+    # VG: case has sg, metadata, height, width (same as EvalSample.image_info in dyna_conv_v18)
+    if all(k in record for k in ("sg", "metadata", "height", "width")):
+        return format_case_vg(record, use_region=False)
+    # COCO: case has instances and captions (same as format_case_coco in dyna_conv_v18)
+    if "instances" in record and "captions" in record:
+        return format_case_coco(record)
+    # Fallback: build from metadata if present (e.g. record has metadata but not top-level sg)
+    if "metadata" in record:
+        meta = record["metadata"]
+        if "sg" in meta and "objects" in meta.get("sg") and "height" in record and "width" in record:
+            # record is case-like with metadata.sg
+            case = {**record, "sg": meta["sg"], "metadata": meta}
+            return format_case_vg(case, use_region=False)
+    return None
+
+
 def format_image_content_simple(metadata):
     """Format image content as simple object list for MMHal evaluation."""
     # Extract object categories
@@ -178,6 +202,8 @@ if __name__ == '__main__':
                        help='API endpoint URL (e.g., https://.../v1/chat/completions). Overrides OPENAI_BASE_URL env var.')
     parser.add_argument('--api-key', type=str, default=None,
                        help='API authorization key. Overrides OPENAI_API_KEY env var.')
+    parser.add_argument('--first-n', type=int, default=None, metavar='N',
+                       help='Only evaluate the first N items (records) in the JSON. Useful for testing.')
     args = parser.parse_args()
 
     # Set default evaluation path if not provided
@@ -200,6 +226,10 @@ if __name__ == '__main__':
     with open(args.response, 'r') as f:
         records = json.load(f)
 
+    if args.first_n is not None:
+        records = records[: args.first_n]
+        print(f"Limiting to first {args.first_n} items (--first-n)")
+
     # Check if evaluation already exists
     if os.path.exists(args.evaluation):
         print(f"Loading existing evaluation from {args.evaluation}")
@@ -212,21 +242,32 @@ if __name__ == '__main__':
         conv_index = 0
         
         for i, record in enumerate(tqdm(records, desc="Evaluating")):
-            # Get metadata and format as simple object list
-            if 'metadata' in record:
-                image_content = format_image_content_simple(record['metadata'])
+            # Image content and gt: for caption use same composition as examiner/dyna_conv_v18
+            if args.gt_type == 'caption':
+                image_info_str = _image_info_like_examiner(record)
+                if image_info_str is not None:
+                    image_content = image_info_str
+                    gt_answer_per_record = image_info_str  # gt = image information (same as examiner)
+                else:
+                    # Fallback when record is not full VG/COCO case
+                    if 'metadata' in record:
+                        image_content = format_image_content_simple(record['metadata'])
+                    else:
+                        image_content = format_image_content_simple(record)
+                    gt_answer_per_record = image_content
             else:
-                # Assume record is already in COCO/VG format
-                image_content = format_image_content_simple(record)
+                # dyna: Image Contents = simple object list; gt = from conversation
+                if 'metadata' in record:
+                    image_content = format_image_content_simple(record['metadata'])
+                else:
+                    image_content = format_image_content_simple(record)
             
             for one_round_conv in record['conversations']:
                 # Get ground truth based on gt-type argument
                 if args.gt_type == 'dyna':
-                    # Use gt field from conversation (for dyna_conv outputs)
                     gt_answer = one_round_conv['gt']
                 else:  # args.gt_type == 'caption'
-                    # Generate from metadata using format_case_vg
-                    gt_answer = format_case_vg(record, use_region=True)
+                    gt_answer = gt_answer_per_record
                 
                 input_text = template.format(
                     image_content, 

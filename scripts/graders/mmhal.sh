@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/graders/mmhal_batch.sh
+# bash scripts/graders/mmhal.sh --local work_dirs/vg/caption --first-n 100
 
 export PYTHONPATH=./
 export CUDA_VISIBLE_DEVICES=0
@@ -9,7 +9,7 @@ source /raid/miniconda3/etc/profile.d/conda.sh
 conda activate coneval-easydetect
 
 # Maximum number of parallel jobs
-MAX_JOBS=5
+MAX_JOBS=7
 
 # Parse arguments
 USE_LOCAL=false
@@ -17,6 +17,7 @@ FORCE=false
 COLLECT_ONLY=false
 COLLECT_BASE_DIR=""
 INPUT_DIR=""
+FIRST_N=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -31,6 +32,10 @@ while [[ $# -gt 0 ]]; do
         --collect-only)
             COLLECT_ONLY=true
             shift
+            ;;
+        --first-n)
+            FIRST_N="$2"
+            shift 2
             ;;
         *)
             if [ -z "$INPUT_DIR" ]; then
@@ -98,6 +103,10 @@ if [ "$USE_LOCAL" = true ]; then
 else
     API_URL="${REMOTE_API_URL}"
     API_KEY="${REMOTE_API_KEY}"
+    if [ -z "$API_URL" ] || [ -z "$API_KEY" ]; then
+        echo "Error: REMOTE_API_URL and REMOTE_API_KEY must be set in .env when not using --local"
+        exit 1
+    fi
     echo "Using REMOTE API at $API_URL"
 fi
 
@@ -107,6 +116,7 @@ total_files=${#model_files[@]}
 
 echo "Input directory: $INPUT_DIR"
 echo "Found $total_files model files to evaluate"
+[ -n "$FIRST_N" ] && echo "Limiting to first $FIRST_N items per JSON (--first-n $FIRST_N)"
 echo "Running with $MAX_JOBS parallel jobs"
 echo "========================================"
 echo ""
@@ -128,23 +138,31 @@ for model_file in "${model_files[@]}"; do
         continue
     fi
     
-    # Skip files containing "pope_converted"
-    if [[ "$base" == *pope_converted* ]]; then
-        echo "⏭️  Skipping (pope_converted): $base"
+    # Skip all *_pope_*.json (e.g. _pope_converted.json, _pope_output.json)
+    if [[ "$base" == *pope_* ]]; then
+        echo "⏭️  Skipping (pope): $base"
+        ((skipped++))
+        continue
+    fi
+
+    # Skip all *_both_*.json (e.g. _with_both_answers.json)
+    if [[ "$base" == *both_* ]]; then
+        echo "⏭️  Skipping (both): $base"
         ((skipped++))
         continue
     fi
     
-    # Check if "caption" is in the folder name
+    # Caption dir: use raw file + --gt-type caption (no conversion; gt from image info like examiner)
     input_file="$model_file"
+    gt_type_arg=""
     if [[ "$INPUT_DIR" == *"caption"* ]]; then
-        # Convert caption format first
-        converted_file="${model_file%.json}_converted-mmal.json"
-        if [ ! -f "$converted_file" ]; then
-            echo "🔄 Converting caption format: $base"
-            python /raid/william/project/context-eval-mllm/grader/mmhal/convert_caption.py "$model_file"
-        fi
-        input_file="$converted_file"
+        gt_type_arg="--gt-type caption"
+        # No conversion: caption JSON already has conversations (prompt/response) and sg/metadata for gt
+    fi
+
+    first_n_arg=""
+    if [ -n "$FIRST_N" ]; then
+        first_n_arg="--first-n $FIRST_N"
     fi
     
     eval_file="${dir}/${base}/mmhal_${base}.json"
@@ -187,7 +205,8 @@ for model_file in "${model_files[@]}"; do
                     --response "$input_file" \
                     --evaluation "$eval_file" \
                     --gpt-model Qwen/Qwen3-30B-A3B-Instruct-2507 \
-                    --api-url "$API_URL" && \
+                    --api-url "$API_URL" \
+                    $gt_type_arg $first_n_arg && \
                 echo "✅ Completed: $base"
             else
                 python grader/mmhal/mmhal_grader.py \
@@ -195,17 +214,19 @@ for model_file in "${model_files[@]}"; do
                     --evaluation "$eval_file" \
                     --gpt-model Qwen/Qwen3-30B-A3B-Instruct-2507 \
                     --api-url "$API_URL" \
-                    --api-key "$API_KEY" && \
+                    --api-key "$API_KEY" \
+                    $gt_type_arg $first_n_arg && \
                 echo "✅ Completed: $base"
             fi
         else
-            # Remote API
+            # Remote API (uses REMOTE_API_URL and REMOTE_API_KEY from .env)
             python grader/mmhal/mmhal_grader.py \
                 --response "$input_file" \
                 --evaluation "$eval_file" \
                 --gpt-model Llama-3.1-70B-Instruct \
                 --api-url "$API_URL" \
-                --api-key "$API_KEY" && \
+                --api-key "$API_KEY" \
+                $gt_type_arg $first_n_arg && \
             echo "✅ Completed: $base"
         fi
     ) > "$log_file" 2>&1 &

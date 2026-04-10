@@ -10,7 +10,6 @@ import os
 import argparse
 import requests
 from typing import List, Dict
-import time
 from tqdm import tqdm
 import base64
 from urllib.parse import urlparse
@@ -95,7 +94,7 @@ def prepare_image_content(image_path_or_url: str) -> dict:
     }
 
 
-def call_vllm_api(api_url: str, image_path_or_url: str, question: str, model_name: str = None) -> str:
+def call_vllm_api(api_url: str, image_path_or_url: str, question: str, model_name: str = None, api_key: str = None) -> str:
     """
     Call vLLM API endpoint with image and question.
     
@@ -108,6 +107,8 @@ def call_vllm_api(api_url: str, image_path_or_url: str, question: str, model_nam
         image_path_or_url: URL or local file path to the image
         question: Question text
         model_name: Optional model name parameter
+        api_key: Optional API key; if vLLM was started with --api-key, pass the same key here.
+                 Omit for local vLLM with no auth (default).
     
     Returns:
         Response text from the model
@@ -138,8 +139,12 @@ def call_vllm_api(api_url: str, image_path_or_url: str, question: str, model_nam
         "temperature": 0.0
     }
     
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    
     try:
-        response = requests.post(api_url, json=payload, timeout=60)
+        response = requests.post(api_url, json=payload, headers=headers or None, timeout=60)
         response.raise_for_status()
         result = response.json()
         
@@ -154,7 +159,7 @@ def call_vllm_api(api_url: str, image_path_or_url: str, question: str, model_nam
         return ""
 
 
-def process_questions(input_file: str, output_file: str, api_url: str, model_name: str = None, batch_size: int = 1, quiet: bool = False):
+def process_questions(input_file: str, output_file: str, api_url: str, model_name: str = None, api_key: str = None, batch_size: int = 1, quiet: bool = False):
     """
     Process all questions in the input file and add 'output' field.
     
@@ -163,6 +168,7 @@ def process_questions(input_file: str, output_file: str, api_url: str, model_nam
         output_file: Path to output JSON with 'output' field
         api_url: vLLM API endpoint URL
         model_name: Optional model name
+        api_key: Optional API key; use if vLLM server was started with --api-key
         batch_size: Number of requests to process (currently 1, can be extended for batching)
         quiet: If True, suppress progress bar (useful for parallel execution)
     """
@@ -197,13 +203,9 @@ def process_questions(input_file: str, output_file: str, api_url: str, model_nam
         
         # Call vLLM API - image is included in every call
         # Each question gets a fresh API call with the image attached
-        output = call_vllm_api(api_url, image_url, question, model_name)
+        output = call_vllm_api(api_url, image_url, question, model_name, api_key=api_key)
         item["output"] = output
         results.append(item)
-        
-        # Small delay to avoid overwhelming the API
-        if batch_size == 1:
-            time.sleep(0.1)
     
     # Save results
     print(f"\nSaving results to: {output_file}")
@@ -220,12 +222,15 @@ if __name__ == "__main__":
                        help='vLLM API endpoint URL (e.g., http://localhost:8000/v1/chat/completions)')
     parser.add_argument('--model-name', type=str, default=None,
                        help='Model name to use (optional, defaults to API default)')
+    parser.add_argument('--api-key', type=str, default=None,
+                       help='API key if vLLM was started with --api-key. Default: no auth (for local vLLM). Can also set VLLM_API_KEY env.')
     parser.add_argument('--output', type=str, default=None,
                        help='Output JSON file (default: input_file with _pope_output suffix)')
     parser.add_argument('--quiet', action='store_true',
                        help='Suppress progress bar (useful for parallel execution)')
     
     args = parser.parse_args()
+    api_key = args.api_key or os.environ.get('VLLM_API_KEY', '').strip() or None
     
     if not os.path.exists(args.input_file):
         print(f"Error: {args.input_file} not found")
@@ -237,4 +242,4 @@ if __name__ == "__main__":
     else:
         output_file = args.output
     
-    process_questions(args.input_file, output_file, args.api_url, args.model_name, quiet=args.quiet)
+    process_questions(args.input_file, output_file, args.api_url, args.model_name, api_key=api_key, quiet=args.quiet)

@@ -1,11 +1,6 @@
 export PYTHONPATH=./
 export CUDA_VISIBLE_DEVICES=0
 
-# python grader/chair/convert.py output/dyna_bad_examples/coverage_certainty.json
-# python grader/chair/chair.py graders/chair/output/coverage_certainty.json
-
-# python grader/chair/chair_vg.py $1 grader/chair/filtered_object_synsets_final.json
-
 #!/bin/bash
 # scripts/graders/chair.sh
 eval "$(conda shell.bash hook)"
@@ -109,8 +104,12 @@ if find "$INPUT_DIR" -maxdepth 1 -name "*.json" -type f | grep -q .; then
         if [[ "$filename" == hallucinated_words_* ]]; then
             continue
         fi
-        # Skip files ending with _pope_output.json
-        if [[ "$filename" == *_pope_output.json ]]; then
+        # Skip all *_pope_*.json (e.g. _pope_converted.json, _pope_output.json)
+        if [[ "$filename" == *pope_* ]]; then
+            continue
+        fi
+        # Skip all *_both_*.json (e.g. _with_both_answers.json)
+        if [[ "$filename" == *both_* ]]; then
             continue
         fi
         
@@ -136,10 +135,11 @@ fi
 
 # Process all model outputs in parallel (max 10 at a time)
 # After organizing caption files, they're at depth 2, same as nested structures
-# Filter out hallucinated_words_ and _pope_output.json files and process the rest
+# Filter out hallucinated_words_, *_pope_*.json, and *_both_*.json files
 find "$INPUT_DIR" -mindepth 2 -maxdepth 2 -name "*.json" -type f | \
     grep -v '/hallucinated_words_' | \
-    grep -v '_pope_output.json' | \
+    grep -v '_pope_' | \
+    grep -v '_both_' | \
     xargs -n 1 -P 5 -I {} bash -c 'process_file "$@"' _ {}
 
 echo "[$(date +'%H:%M:%S')] All files processed!"

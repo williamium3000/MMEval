@@ -54,11 +54,11 @@ def load_model(args):
         return partial(eval_model_blip2, model=model, processor=processor)
     elif "Qwen3-VL" in args.model_path:
         from .infer_qwenvl3 import eval_model as eval_model_qwenvl3
-        from transformers import Qwen3VLMoeForConditionalGeneration, AutoProcessor
-        model = Qwen3VLMoeForConditionalGeneration.from_pretrained(
-            args.model_path, dtype="auto", device_map="auto", trust_remote_code=True
+        from transformers import AutoModelForImageTextToText, AutoProcessor
+        model = AutoModelForImageTextToText.from_pretrained(
+            args.model_path, torch_dtype="auto", device_map="auto", trust_remote_code=True
         )
-        processor = AutoProcessor.from_pretrained(args.model_path)
+        processor = AutoProcessor.from_pretrained(args.model_path, trust_remote_code=True)
         return partial(eval_model_qwenvl3, processor=processor, model=model)
     elif "Qwen2.5-VL" in args.model_path:
         from .infer_qwenvl2d5 import eval_model as eval_model_qwenvl2d5
@@ -155,6 +155,15 @@ def load_model(args):
     elif "gemma-3" in args.model_path:
             from .infer_gemma3 import eval_model as eval_model_gemma3
             from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+            # Avoid FailOnRecompileLimitHit: Gemma3 forward can trigger many dynamo recompilations
+            try:
+                import torch._dynamo as dynamo
+                if hasattr(dynamo, 'config'):
+                    dynamo.config.cache_size_limit = 512
+                    if hasattr(dynamo.config, 'recompile_limit'):
+                        dynamo.config.recompile_limit = 128
+            except Exception:
+                pass
             model = Gemma3ForConditionalGeneration.from_pretrained(args.model_path, device_map="auto").eval()
             processor = AutoProcessor.from_pretrained(args.model_path)
             

@@ -4,7 +4,7 @@
 # python /raid/william/project/context-eval-mllm/utils/check_output.py /raid/william/project/context-eval-mllm/work_dirs/vg/ablation_v18_nocontext --auto-csv --copy-completed --clean-duplicates
 # python /raid/william/project/context-eval-mllm/utils/check_output.py /raid/william/project/context-eval-mllm/work_dirs/vg/ablation_nonodeselect --auto-csv --copy-completed --clean-duplicates
 # python /raid/william/project/context-eval-mllm/utils/check_output.py /raid/william/project/context-eval-mllm/work_dirs/vg/ablation_1round --auto-csv --copy-completed --clean-duplicates
-# python /raid/william/project/context-eval-mllm/utils/check_output.py /raid/william/project/context-eval-mllm/work_dirs/vg/ablation_baseline --auto-csv --copy-completed --clean-duplicates
+# python /raid/william/project/context-eval-mllm/utils/check_output.py /raid/william/project/context-eval-mllm/work_dirs/vg/ablation_baseline2 --auto-csv --copy-completed --clean-duplicates
 # python /raid/william/project/context-eval-mllm/utils/check_output.py /raid/william/project/context-eval-mllm/work_dirs/vg/final_run_v18_gpt4o_resume5 --auto-csv --copy-completed --clean-duplicates
 
 #!/usr/bin/env python3

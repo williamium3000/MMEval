@@ -41,8 +41,8 @@ else:
 REMOTE_API_KEY = os.getenv("REMOTE_API_KEY", "")
 REMOTE_MODEL = os.getenv("REMOTE_API_MODEL", "Qwen3-30B-A3B-Instruct-2507")
 
-# Local vLLM server endpoint (matches scripts/host_qwen3_30b_gpu7.sh port 8003)
-LOCAL_BASE_URL = "http://localhost:8003/v1"
+# Local vLLM server endpoint (matches scripts/host_qwen3_30b_gpu01.sh port 8004)
+LOCAL_BASE_URL = "http://localhost:8004/v1"
 LOCAL_API_KEY = ""  # Dummy key for vLLM (not used)
 LOCAL_MODEL = "Qwen/Qwen3-30B-A3B-Instruct-2507"  # Full model path as hosted by vLLM
 
@@ -549,7 +549,9 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=5,
                         help="Number of samples per batch")
     parser.add_argument('--local', action="store_true",
-                        help="Use local vLLM server on localhost:8003 instead of remote API")
+                        help="Use local vLLM server on localhost:8004 instead of remote API (matches scripts/host_qwen3_30b_gpu01.sh)")
+    parser.add_argument('--resume', action="store_true",
+                        help="If outfile exists, load it and skip samples that already have dsg_qa filled; process only the rest")
 
     args = parser.parse_args()
 
@@ -578,17 +580,51 @@ if __name__ == "__main__":
     get_response = partial(get_llm_response, model=args.pope_model_name)
     get_response_batch = partial(get_llm_response_batch, model=args.pope_model_name)
 
-    # Only load VLM model if not extracting from transcript and not verify_only
-    eval_model_fn = None
-    if not args.extract_from_transcript and not args.verify_only:
-        from infer.infer_llava import load_model, eval_model
-        eval_model_fn = eval_model
-        model_name, tokenizer, model, image_processor, context_len = load_model(args.model_path, args.model_base)
-        model_path = args.model_path
+    def _is_sample_complete(sample):
+        """True if sample has been fully processed (each turn with dsg_qa has items with 'answer')."""
+        for turn in sample.get("conversations", []):
+            qa_list = turn.get("dsg_qa", [])
+            if not qa_list:
+                continue
+            for qa in qa_list:
+                if "answer" not in qa:
+                    return False
+        # If at least one turn has dsg_qa with answers, consider complete; else we need to process
+        for turn in sample.get("conversations", []):
+            if turn.get("dsg_qa") and any("answer" in qa for qa in turn["dsg_qa"]):
+                return True
+        return False
+
+    # Resume: load outfile and skip already-complete samples in [start_idx, start_idx+sample_num)
+    if args.resume and os.path.isfile(args.outfile):
+        try:
+            out_data = json.load(open(args.outfile, "r"))
+            if len(out_data) != len(samples):
+                print(f"Resume: outfile has {len(out_data)} samples, input has {len(samples)}; ignoring resume.")
+            else:
+                end_idx = min(args.start_idx + args.sample_num, len(samples))
+                n_complete = 0
+                for i in range(args.start_idx, end_idx):
+                    if _is_sample_complete(out_data[i]):
+                        samples[i] = out_data[i]
+                        n_complete += 1
+                    else:
+                        args.start_idx = i
+                        break
+                else:
+                    # All in range complete; set start_idx so no samples to process
+                    args.start_idx = len(samples)
+                print(f"Resume: loaded {args.outfile}; {n_complete} already complete, starting from index {args.start_idx}")
+        except Exception as e:
+            print(f"Resume: failed to load outfile ({e}); starting from start_idx={args.start_idx}")
 
     # Select samples to process
     samples_to_process = samples[args.start_idx:args.start_idx + args.sample_num]
-    
+
+    if not samples_to_process:
+        print("Nothing to process (all samples in range already complete or empty). Exiting.")
+        sys.exit(0)
+
     print(f"Processing {len(samples_to_process)} samples (from index {args.start_idx})")
     print(f"Batch size: {args.batch_size}")
     if args.verify_only:
@@ -958,9 +994,51 @@ if __name__ == "__main__":
                     if image_total > 0:
                         print(f"[Image-level] Accuracy: {image_correct}/{image_total} = {sample['dsg_image_accuracy']:.2%}")
         
-        # Save intermediate results after each batch
+        # Save result file after each batch (enables resume on next run with --resume)
         with open(args.outfile, "w") as f:
             json.dump(samples, f, indent=4)
+        
+        # Print per-file summary stats (only evaluated questions, skipping gt_unknown and extracted_unknown)
+        if args.verify_with_annotation:
+            # Yes/No Question Accuracy stats
+            batch_evaluated = 0
+            batch_correct = 0
+            batch_gt_unknown = 0
+            batch_extracted_unknown = 0
+            batch_total = 0
+            
+            for sample in batch_samples:
+                # Yes/No Question Accuracy: from dsg_question_judgments
+                judgments = sample.get("dsg_question_judgments", [])
+                if judgments:
+                    sample_gt_unknown = sum(1 for j in judgments if j.get("skip_reason") == "gt_unknown")
+                    sample_extracted_unknown = sum(1 for j in judgments if j.get("skip_reason") == "extracted_unknown")
+                    sample_evaluated = len(judgments) - sample_gt_unknown - sample_extracted_unknown
+                    sample_correct = sum(1 for j in judgments if j.get("skip_reason") is None and j.get("is_correct") == True)
+                    
+                    batch_total += len(judgments)
+                    batch_evaluated += sample_evaluated
+                    batch_correct += sample_correct
+                    batch_gt_unknown += sample_gt_unknown
+                    batch_extracted_unknown += sample_extracted_unknown
+            
+            if batch_total > 0:
+                print(f"\n{'='*60}")
+                print(f"Batch Summary (samples {batch_start} to {min(batch_start + args.batch_size - 1, len(samples_to_process) - 1)})")
+                print(f"{'='*60}")
+                
+                # Yes/No Question Accuracy
+                print(f"\n[Yes/No Question Accuracy]")
+                print(f"  Total questions: {batch_total}")
+                print(f"  Skipped (GT unknown): {batch_gt_unknown}")
+                print(f"  Skipped (extracted unknown): {batch_extracted_unknown}")
+                print(f"  Evaluated: {batch_evaluated} out of {batch_total}")
+                if batch_evaluated > 0:
+                    print(f"  Correct: {batch_correct} out of {batch_evaluated}")
+                    print(f"  Accuracy (evaluated only): {batch_correct / batch_evaluated:.2%}")
+                
+                
+                print(f"{'='*60}")
 
     print(f"\nResults saved to {args.outfile}")
     
@@ -1010,68 +1088,18 @@ if __name__ == "__main__":
         
         num_images_with_results = len(image_accuracies)
         
-        # Response-level statistics - recalculate from question judgments
-        response_accuracies = []
-        response_total_generated = 0
-        response_total_evaluated = 0
-        response_total_correct = 0
-        response_total_gt_unknown = 0
-        response_total_extracted_unknown = 0
-        
-        for s in processed_samples:
-            judgments = s.get("dsg_question_judgments", [])
-            if judgments:
-                # Group judgments by turn_index
-                turn_judgments = {}
-                for j in judgments:
-                    turn_idx = j.get("turn_index", 0)
-                    if turn_idx not in turn_judgments:
-                        turn_judgments[turn_idx] = []
-                    turn_judgments[turn_idx].append(j)
-                
-                for turn_idx, turn_js in turn_judgments.items():
-                    turn_generated = len(turn_js)
-                    turn_gt_unknown = sum(1 for j in turn_js if j.get("skip_reason") == "gt_unknown")
-                    turn_extracted_unknown = sum(1 for j in turn_js if j.get("skip_reason") == "extracted_unknown")
-                    # Evaluated = exclude both gt_unknown and extracted_unknown
-                    turn_evaluated = turn_generated - turn_gt_unknown - turn_extracted_unknown
-                    turn_correct = sum(1 for j in turn_js if j.get("is_correct") == True)
-                    
-                    response_total_generated += turn_generated
-                    response_total_evaluated += turn_evaluated
-                    response_total_gt_unknown += turn_gt_unknown
-                    response_total_extracted_unknown += turn_extracted_unknown
-                    response_total_correct += turn_correct
-                    
-                    if turn_evaluated > 0:
-                        response_accuracies.append(turn_correct / turn_evaluated)
-        
-        num_responses = len(response_accuracies)
-        
         print(f"\n{'='*60}")
         print(f"=== Overall Statistics ===")
         print(f"{'='*60}")
         
-        print(f"\n[Image-level Statistics]")
+        print(f"\n[Yes/No Question Accuracy]")
         print(f"  Images with results: {num_images_with_results}")
         print(f"  Total generated questions: {total_generated}")
-        print(f"  Extracted Unknown (skip): {total_extracted_unknown}")
-        print(f"  Evaluated questions: {total_evaluated}")
-        print(f"  Correct answers: {total_correct}")
-        print(f"  GT Unknown (skip): {total_gt_unknown}")
+        print(f"  Skipped (GT unknown): {total_gt_unknown}")
+        print(f"  Skipped (extracted unknown): {total_extracted_unknown}")
+        print(f"  Evaluated: {total_evaluated} out of {total_generated}")
+        print(f"  Correct: {total_correct} out of {total_evaluated}")
         if total_evaluated > 0:
-            print(f"  Accuracy: {total_correct / total_evaluated:.2%}")
+            print(f"  Accuracy (evaluated only): {total_correct / total_evaluated:.2%}")
         if image_accuracies:
             print(f"  Avg accuracy per image: {sum(image_accuracies) / len(image_accuracies):.2%}")
-        
-        print(f"\n[Response-level Statistics]")
-        print(f"  Responses with results: {num_responses}")
-        print(f"  Total generated questions: {response_total_generated}")
-        print(f"  Extracted Unknown (skip): {response_total_extracted_unknown}")
-        print(f"  Evaluated questions: {response_total_evaluated}")
-        print(f"  Correct answers: {response_total_correct}")
-        print(f"  GT Unknown (skip): {response_total_gt_unknown}")
-        if response_total_evaluated > 0:
-            print(f"  Accuracy: {response_total_correct / response_total_evaluated:.2%}")
-        if response_accuracies:
-            print(f"  Avg accuracy per response: {sum(response_accuracies) / len(response_accuracies):.2%}")

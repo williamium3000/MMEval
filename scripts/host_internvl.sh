@@ -1,52 +1,56 @@
 #!/bin/bash
-# Script to host Qwen3-30B-A3B-Instruct-2507 on GPUs 0,1 using vLLM
+# Host InternVL via vLLM (reference: scripts/pope_infer_vllm_internvl.sh)
+# Usage: bash scripts/host_internvl.sh [GPU] [PORT]
+#   GPU default: 6, PORT default: 8007
 
 set -e
 
-# Configuration
-MODEL_PATH="Qwen/Qwen3-30B-A3B-Instruct-2507"
-GPUS="0,1"  # Use GPUs 0 and 1 for tensor parallelism
-PORT=8004
-LOG_FILE="tmp/vllm_Qwen3-30B-A3B-Instruct-2507_${PORT}.log"
+# Configuration (override with env or args)
+MODEL_PATH="${MODEL_PATH:-OpenGVLab/InternVL3-8B-Instruct}"
+MODEL_NAME="${MODEL_NAME:-InternVL3-8B-Instruct}"
+GPUS=2,5,6,7
+PORT="${2:-8007}"
+GPU_UTIL="${GPU_UTIL:-0.25}"
+LOG_FILE="tmp/vllm_${MODEL_NAME}_${PORT}.log"
 
-# Create log directory
 mkdir -p tmp
 
-# Initialize conda
 eval "$(conda shell.bash hook)"
-conda activate verl  # Adjust to your vLLM environment
+conda activate verl
 
 export PYTHONPATH=./
 
 echo "=================================================================================="
-echo "Starting vLLM server for Qwen3-30B-A3B-Instruct-2507"
+echo "Starting vLLM server for InternVL"
 echo "=================================================================================="
 echo "Model: $MODEL_PATH"
-echo "GPUs: $GPUS (tensor parallelism)"
-echo "Port: $PORT"
-echo "Log: $LOG_FILE"
+echo "GPUs:  $GPUS"
+echo "Port:  $PORT"
+echo "Log:   $LOG_FILE"
 echo ""
 
-# Start vLLM server in background on GPUs 0 and 1
-echo "Starting vLLM server on GPUs $GPUS with tensor parallelism..."
+echo "[$MODEL_NAME] Starting vLLM server on GPU(s) $GPUS..."
+echo "[$MODEL_NAME] Note: InternVL may have video processing issues during initialization"
+echo "[$MODEL_NAME] If startup fails, check $LOG_FILE for details"
 (
     export CUDA_VISIBLE_DEVICES=$GPUS
     TORCH_SYMM_MEM_DISABLE_MULTICAST=1 python -m vllm.entrypoints.openai.api_server \
         --model "$MODEL_PATH" \
         --port "$PORT" \
-        --host "0.0.0.0" \
-        --gpu-memory-utilization 0.45 \
-        --tensor-parallel-size 2 \
+        --host 0.0.0.0 \
+        --gpu-memory-utilization "$GPU_UTIL" \
+        --trust-remote-code \
+        --enforce-eager \
+        --tensor-parallel-size $(echo "$GPUS" | tr ',' '\n' | wc -l) \
         > "$LOG_FILE" 2>&1
 ) &
 
 VLLM_PID=$!
-echo "vLLM server started (PID: $VLLM_PID) on port $PORT using GPUs $GPUS"
+echo "[$MODEL_NAME] vLLM server started (PID: $VLLM_PID) on port $PORT"
 echo ""
 
-# Wait for server to be ready
 echo "Waiting for server to be ready..."
-max_attempts=300  # 4 minutes timeout for large model
+max_attempts=120
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
     if curl -s "http://localhost:$PORT/health" > /dev/null 2>&1; then
@@ -56,17 +60,17 @@ while [ $attempt -lt $max_attempts ]; do
         echo "Server is running!"
         echo "=================================================================================="
         echo "Endpoint: http://localhost:$PORT/v1/chat/completions"
-        echo "API Key: lgms_sk_live"
+        echo "Model ID: $MODEL_PATH"
         echo ""
-        echo "To stop the server, run: kill $VLLM_PID"
-        echo "To view logs: tail -f $LOG_FILE"
+        echo "To stop: kill $VLLM_PID"
+        echo "Logs:    tail -f $LOG_FILE"
         echo "=================================================================================="
         break
     fi
     sleep 2
     attempt=$((attempt + 1))
     if [ $((attempt % 10)) -eq 0 ]; then
-        echo "Still waiting... (attempt $attempt/$max_attempts)"
+        echo "[$MODEL_NAME] Still waiting... (attempt $attempt/$max_attempts)"
     fi
 done
 
@@ -77,5 +81,4 @@ if [ $attempt -eq $max_attempts ]; then
     exit 1
 fi
 
-# Keep script running
 wait $VLLM_PID

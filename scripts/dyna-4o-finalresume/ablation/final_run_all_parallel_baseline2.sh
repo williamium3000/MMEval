@@ -49,42 +49,68 @@ echo "Starting parallel inference jobs..."
 echo "Logs will be saved to: ${LOG_DIR}"
 
 (
-  OUTFILE=$SAVE_DIR/gemma-3-12b-it.json
-  LOGFILE=${LOG_DIR}/gemma-3-12b-it.log
-  if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
-    echo "Skipping gemma-3-12b-it - output file already exists and no errors in log: $OUTFILE"
+  OUTFILE=$SAVE_DIR/Qwen3-VL-8B-Instruct.json
+  LOGFILE=${LOG_DIR}/Qwen3-VL-8B-Instruct.log
+  if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 50 "$LOGFILE" | grep -iq "error"; then
+    echo "Skipping Qwen3-VL-8B-Instruct - output file already exists and no errors in log: $OUTFILE"
   else
-    conda activate work_dirs/envs/gemma3
+    conda activate work_dirs/envs/qwenvl3
     export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
-    python $RUN_FILE --dataset vg --model_path google/gemma-3-12b-it --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL  --num_samples $NUM_SAMPLES
+    python $RUN_FILE --dataset vg --model_path Qwen/Qwen3-VL-8B-Instruct --outfile $OUTFILE --num_samples $NUM_SAMPLES --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --max_rounds 10
   fi
-) > ${LOG_DIR}/gemma-3-12b-it.log 2>&1 &
+) > ${LOG_DIR}/Qwen3-VL-8B-Instruct.log 2>&1 &
+
+# (
+#   OUTFILE=$SAVE_DIR/gemma-3-12b-it.json
+#   LOGFILE=${LOG_DIR}/gemma-3-12b-it.log
+#   if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 50 "$LOGFILE" | grep -iq "error"; then
+#     echo "Skipping gemma-3-12b-it - output file already exists and no errors in log: $OUTFILE"
+#   else
+#     conda activate work_dirs/envs/gemma3
+#     export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
+#     python $RUN_FILE --dataset vg --model_path google/gemma-3-12b-it --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL  --num_samples $NUM_SAMPLES
+#   fi
+# ) > ${LOG_DIR}/gemma-3-12b-it.log 2>&1 &
+
+# ===== Env: opera - Opera LLaVA Series =====
+# (
+#   OUTFILE=$SAVE_DIR/opera-llava-1.5.json
+#   LOGFILE=${LOG_DIR}/opera-llava-1.5.log
+#   if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 50 "$LOGFILE" | grep -iq "error"; then
+#     echo "Skipping opera-llava-1.5 - output file already exists and no errors in log: $OUTFILE"
+#   else
+#     conda activate opera
+#     export CUDA_VISIBLE_DEVICES=0 # dedicated GPU for opera
+#     python $RUN_FILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --dataset vg --model_path /raid/william/project/context-eval-mllm/data/checkpoints/opera/llava-1.5 --outfile $OUTFILE --num_samples $NUM_SAMPLES
+#   fi
+# ) > ${LOG_DIR}/opera-llava-1.5.log 2>&1 &
 
 
-# ===== Env: internvl - InternVL2 Series =====
-(
-  OUTFILE=$SAVE_DIR/InternVL2-2B.json
-  LOGFILE=${LOG_DIR}/InternVL2-2B.log
-  if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
-    echo "Skipping InternVL2-2B - output file already exists and no errors in log: $OUTFILE"
-  else
-    conda activate work_dirs/envs/internvl
-    export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
-    python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2-2B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
-  fi
-) > ${LOG_DIR}/InternVL2-2B.log 2>&1 &
 
-(
-  OUTFILE=$SAVE_DIR/InternVL2-8B.json
-  LOGFILE=${LOG_DIR}/InternVL2-8B.log
-  if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
-    echo "Skipping InternVL2-8B - output file already exists and no errors in log: $OUTFILE"
-  else
-    conda activate work_dirs/envs/internvl
-    export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
-    python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2-8B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
-  fi
-) > ${LOG_DIR}/InternVL2-8B.log 2>&1 &
+# # ===== Env: internvl - InternVL2 Series =====
+# (
+#   OUTFILE=$SAVE_DIR/InternVL2-2B.json
+#   LOGFILE=${LOG_DIR}/InternVL2-2B.log
+#   if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
+#     echo "Skipping InternVL2-2B - output file already exists and no errors in log: $OUTFILE"
+#   else
+#     conda activate work_dirs/envs/internvl
+#     export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
+#     python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2-2B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
+#   fi
+# ) > ${LOG_DIR}/InternVL2-2B.log 2>&1 &
+
+# (
+#   OUTFILE=$SAVE_DIR/InternVL2-8B.json
+#   LOGFILE=${LOG_DIR}/InternVL2-8B.log
+#   if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
+#     echo "Skipping InternVL2-8B - output file already exists and no errors in log: $OUTFILE"
+#   else
+#     conda activate work_dirs/envs/internvl
+#     export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
+#     python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2-8B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
+#   fi
+# ) > ${LOG_DIR}/InternVL2-8B.log 2>&1 &
 
 # (
 #   OUTFILE=$SAVE_DIR/InternVL2-26B.json
@@ -98,30 +124,30 @@ echo "Logs will be saved to: ${LOG_DIR}"
 #   fi
 # ) > ${LOG_DIR}/InternVL2-26B.log 2>&1 &
 
-# ===== Env: internvl - InternVL2.5 Series =====
-(
-  OUTFILE=$SAVE_DIR/InternVL2_5-2B.json
-  LOGFILE=${LOG_DIR}/InternVL2_5-2B.log
-  if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
-    echo "Skipping InternVL2_5-2B - output file already exists and no errors in log: $OUTFILE"
-  else
-    conda activate work_dirs/envs/internvl
-    export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
-    python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2_5-2B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
-  fi
-) > ${LOG_DIR}/InternVL2_5-2B.log 2>&1 &
+# # ===== Env: internvl - InternVL2.5 Series =====
+# (
+#   OUTFILE=$SAVE_DIR/InternVL2_5-2B.json
+#   LOGFILE=${LOG_DIR}/InternVL2_5-2B.log
+#   if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
+#     echo "Skipping InternVL2_5-2B - output file already exists and no errors in log: $OUTFILE"
+#   else
+#     conda activate work_dirs/envs/internvl
+#     export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
+#     python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2_5-2B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
+#   fi
+# ) > ${LOG_DIR}/InternVL2_5-2B.log 2>&1 &
 
-(
-  OUTFILE=$SAVE_DIR/InternVL2_5-8B.json
-  LOGFILE=${LOG_DIR}/InternVL2_5-8B.log
-  if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
-    echo "Skipping InternVL2_5-8B - output file already exists and no errors in log: $OUTFILE"
-  else
-    conda activate work_dirs/envs/internvl
-    export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
-    python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2_5-8B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
-  fi
-) > ${LOG_DIR}/InternVL2_5-8B.log 2>&1 &
+# (
+#   OUTFILE=$SAVE_DIR/InternVL2_5-8B.json
+#   LOGFILE=${LOG_DIR}/InternVL2_5-8B.log
+#   if [ -f "$OUTFILE" ] && [ -f "$LOGFILE" ] && ! tail -n 5 "$LOGFILE" | grep -iq "error"; then
+#     echo "Skipping InternVL2_5-8B - output file already exists and no errors in log: $OUTFILE"
+#   else
+#     conda activate work_dirs/envs/internvl
+#     export CUDA_VISIBLE_DEVICES=$(select_gpus 1)
+#     python $RUN_FILE --dataset vg --model_path OpenGVLab/InternVL2_5-8B --outfile $OUTFILE --p_mode CONV_MODEL_PERSPECTIVE_PROMPT_VG_ICL --num_samples $NUM_SAMPLES
+#   fi
+# ) > ${LOG_DIR}/InternVL2_5-8B.log 2>&1 &
 
 # Wait for all background jobs to complete
 wait
