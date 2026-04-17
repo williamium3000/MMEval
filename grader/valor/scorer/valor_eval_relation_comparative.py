@@ -2,12 +2,12 @@ import json
 import argparse
 import os
 
-class CHAIR(object):
 
-    def __init__(self, args):
-        
-        with open(args.matched_objects_file_path, "r") as f:
-            self.matched_objects_file = [json.loads(l) for l in f.readlines()]
+class CHAIR(object):
+    def __init__(self, matched_objects_file):
+        # with open(args.matched_objects_file_path, "r") as f:
+        #     self.matched_objects_file = [json.loads(l) for l in f.readlines()]
+        self.matched_objects_file = matched_objects_file
         
         self.imageids = []
         #self.imageid_to_captions = {}
@@ -17,6 +17,7 @@ class CHAIR(object):
         self.imageid_to_mapping = {}
         self.imageid_to_broader_concept = {}
         self.broader_concept_filtered = {}
+        self.imageid_to_conv = {}
 
         for image_info in self.matched_objects_file:
             image_id = image_info["image_id"]
@@ -28,9 +29,9 @@ class CHAIR(object):
             # self.imageid_to_mapping[image_id] = image_info["mapping"]
             self.imageid_to_broader_concept[image_id] = image_info["broader_concept"]
             self.broader_concept_filtered[image_id] = image_info["num_broader_concept_filtered"]
+            self.imageid_to_conv[image_id] = image_info["conversations"]
 
     def compute_chair(self):
-        
         imageids = self.imageids
  
         num_caps = 0.
@@ -44,7 +45,6 @@ class CHAIR(object):
         output = {"sentences": []} 
     
         for image_id in imageids:
-
             gt_objects = self.imageid_to_gt_objects[image_id].values()
             if self.imageid_to_ge_objects[image_id] == "":
                 ge_objects = []
@@ -60,6 +60,7 @@ class CHAIR(object):
                 "gt_words": list(gt_objects),
                 "generated_words": list(ge_objects),
                 "matched_words": list(matched_objects),
+                "conversations": self.imageid_to_conv[image_id],
                 "metrics": {
                     "faithfulness_score_s": 0,
                     "faithfulness_score_i": 0,
@@ -112,15 +113,16 @@ class CHAIR(object):
 
         return output 
 
-def save_evaluation_results(args): 
-    tag = args.matched_objects_file_path.split("/")[-1].split(".")[0]
-    
-    if not os.path.exists(args.evaluation_results_path):
-        os.makedirs(args.evaluation_results_path)
-    
-    save_file_path = f"{args.evaluation_results_path}/chair_evaluation_results_{tag}.json"
-    
-    with open(save_file_path, "w") as f:
+
+def save_evaluation_results(args, cap_dict):
+    # tag = args.matched_objects_file_path.split("/")[-1].split(".")[0]
+    #
+    # if not os.path.exists(args.evaluation_results_path):
+    #     os.makedirs(args.evaluation_results_path)
+    #
+    # save_file_path = f"{args.evaluation_results_path}/chair_evaluation_results_{tag}.json"
+    #
+    with open(args.output_file_path, "w") as f:
         json.dump(cap_dict, f, indent=4)
 
 def print_metrics(hallucination_cap_dict, quiet=False):
@@ -137,7 +139,8 @@ def print_metrics(hallucination_cap_dict, quiet=False):
 
     else:
         return metric_string
- 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i","--matched_objects_file_path", type=str,required=True)

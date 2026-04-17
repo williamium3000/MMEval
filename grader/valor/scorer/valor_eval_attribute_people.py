@@ -2,12 +2,13 @@ import json
 import argparse
 import os
 
-class CHAIR(object):
 
-    def __init__(self, args):
-        
-        with open(args.matched_obj_atts_file_path, "r") as f:
-            self.matched_obj_atts_file = [json.loads(l) for l in f.readlines()]
+class CHAIR(object):
+    def __init__(self, matched_obj_atts_file):
+        # with open(args.matched_obj_atts_file_path, "r") as f:
+        #     self.matched_obj_atts_file = [json.loads(l) for l in f.readlines()]
+
+        self.matched_obj_atts_file = matched_obj_atts_file
         
         self.imageids = []
         self.imageid_to_captions = {}
@@ -25,7 +26,6 @@ class CHAIR(object):
             self.imageid_to_broader_concept[image_id] = image_info["broader_concept"]
 
     def compute_chair(self):
-        
         imageids = self.imageids
  
         num_caps = 0.
@@ -39,7 +39,6 @@ class CHAIR(object):
         output = {"sentences": []} 
     
         for image_id in imageids:
-
             gt_obj_atts = self.imageid_to_gt_obj_atts[image_id].values()
             gt_obj_atts = [gt_obj_att["object"] for gt_obj_att in gt_obj_atts]
             gt_obj_atts_list = [item.strip() for atts in gt_obj_atts for item in atts.split("),")]
@@ -47,8 +46,8 @@ class CHAIR(object):
             for item in gt_obj_atts_list:
                 if item[-1] != ")":
                     item += ")"
-                    new_gt_obj_atts_list.append(item)
-            gt_obj_atts = new_gt_obj_atts_list
+                new_gt_obj_atts_list.append(item)
+            gt_obj_atts = list(set(new_gt_obj_atts_list))
 
             ge_obj_atts = self.imageid_to_ge_obj_atts[image_id].values()
             new_ge_obj_atts = []
@@ -61,15 +60,15 @@ class CHAIR(object):
                 if item[-1] != ")":
                     item += ")"
                 new_ge_obj_atts_list.append(item)
-            ge_obj_atts = new_ge_obj_atts_list
+            ge_obj_atts = list(set(new_ge_obj_atts_list))
 
             matched_obj_atts = self.imageid_to_matched_obj_atts[image_id].values()
             matched_obj_atts = [list(matched_obj_att["object"].values()) for matched_obj_att in matched_obj_atts if matched_obj_att.get("object") != None]
-            matched_obj_atts = [matched_obj_att[0] for matched_obj_att in matched_obj_atts if len(matched_obj_att) > 0]
+            matched_obj_atts = list(set([matched_obj_att[0] for matched_obj_att in matched_obj_atts if len(matched_obj_att) > 0]))
 
             broader_concepts = self.imageid_to_broader_concept[image_id].values()
             broader_concepts = [list(broader_concept["object"].values()) for broader_concept in broader_concepts if broader_concept.get("object") != None]
-            broader_concepts = [broader_concept[0] for broader_concept in broader_concepts if len(broader_concept) > 0]
+            broader_concepts = list(set([broader_concept[0] for broader_concept in broader_concepts if len(broader_concept) > 0]))
 
             cap_dict = {
                 "image_id": image_id, 
@@ -129,16 +128,18 @@ class CHAIR(object):
 
         return output 
 
-def save_evaluation_results(args): 
-    tag = args.matched_obj_atts_file_path.split("/")[-1].split(".")[0]
-    
-    if not os.path.exists(args.evaluation_results_path):
-        os.makedirs(args.evaluation_results_path)
-    
-    save_file_path = f"{args.evaluation_results_path}/chair_evaluation_results_{tag}.json"
-    
-    with open(save_file_path, "w") as f:
+
+def save_evaluation_results(args, cap_dict):
+    # tag = args.matched_obj_atts_file_path.split("/")[-1].split(".")[0]
+    #
+    # if not os.path.exists(args.evaluation_results_path):
+    #     os.makedirs(args.evaluation_results_path)
+    #
+    # save_file_path = f"{args.evaluation_results_path}/chair_evaluation_results_{tag}.json"
+
+    with open(args.output_file_path, "w") as f:
         json.dump(cap_dict, f, indent=4)
+
 
 def print_metrics(hallucination_cap_dict, quiet=False):
     sentence_metrics = hallucination_cap_dict["overall_metrics"]
@@ -154,7 +155,8 @@ def print_metrics(hallucination_cap_dict, quiet=False):
 
     else:
         return metric_string
- 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-mp", "--matched_obj_atts_file_path", type=str, required=True)
@@ -166,4 +168,4 @@ if __name__ == "__main__":
     cap_dict = evaluator.compute_chair() 
     
     print_metrics(cap_dict)
-    save_evaluation_results(args)
+    save_evaluation_results(args, cap_dict)
