@@ -11,21 +11,24 @@ import json
 from typing import List, Dict, Optional
 
 
-def load_svg(num_samples: Optional[int] = None) -> List[Dict]:
+def load_svg(num_samples: Optional[int] = None, split: str = "train_500_augmented") -> List[Dict]:
     """
     Load SVG dataset in VG format.
-    
+
     Loads from Icey444/svg5000_in_vg which has pre-converted SVG data to VG format
     with 'sg' key compatible with SceneGraphData.
-    
+
     Args:
-        num_samples: Number of samples to load (None = all, max 500)
-    
+        num_samples: Number of samples to load (None = all)
+        split: HF split to load. "train" = original noun-phrase names with empty
+            attributes; "train_500_augmented" (default) = first 500 rows with
+            cleaned head-noun names and OpenAI-extracted attributes.
+
     Returns:
         List of sample dictionaries with 'sg' key in VG format, images, and metadata.
     """
-    print(f"Loading SVG dataset in VG format from Icey444/svg5000_in_vg...")
-    dataset = load_dataset("Icey444/svg5000_in_vg", split='train')
+    print(f"Loading SVG dataset in VG format from Icey444/svg5000_in_vg [{split}]...")
+    dataset = load_dataset("Icey444/svg5000_in_vg", split=split)
     
     # Only load the requested number of samples
     num_to_load = num_samples if num_samples is not None else len(dataset)

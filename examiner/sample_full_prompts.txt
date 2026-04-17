@@ -1,0 +1,1583 @@
+================================================================================
+CALL 1: Context Generation (GPT-5)
+Model: gpt-5
+================================================================================
+
+--- messages[0] role=system ---
+You are an expert in generating realistic and diverse contexts for images. You excel at understanding the image content and predicting the possible scenarios and context in which the image might be situated.
+
+--- messages[1] role=user ---
+Your task is to create a realistic scenario in which the given image is situated in the first-person view, i.e. you should imagine the image depicts your view of the environment. This context should incorporate a background setting, the characters and objects involved, and a specific goal or objective that is relevant to the image. The context must be plausible, align with real-world experiences, and directly connect with the depicted elements in the image.
+
+The image will be described through a list of objects, their attributes, and their spatial relationships, with each object represented by a set of coordinates in the image. These coordinates (x1, y1, x2, y2) will range from 0 to 1, corresponding to the top-left and bottom-right corners of each object.
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+========================
+CORE CONSTRAINTS
+========================
+1) First-person framing:
+   - Write as if the image is what "I" am currently seeing in front of me.
+2) Avoid non-visual / not inferable human interaction goals:
+   - If humans are present, you may include them as part of the scene, but the goal must NOT require learning about their demographic information (names, intentions, etc.). 
+3) Grounding in image instances:
+    - Each context MUST involve multiple instances, attributes, or relations from the image.
+    - Given sufficient diversity, you should generate contexts that naturally involve as many instances, attributes, or relations from the image as possible.
+4) Diversity without redundancy:
+   - The two contexts must be meaningfully different (different emphasis on objects/relations), not just rephrases of the same scenario.
+     
+Instructions:
+1. Contextualization: Develop a background scenario that is logical and directly relevant to the visual elements in the image. The background should describe the setting, time, and possible situation in which these objects or characters might exist.
+2. Goal: Identify a specific action, objective, or task that "I" am trying to accomplish, which should be coherent with the scene described.
+3. Diversity: For the given image, you should generate several different and diverse contexts.
+
+Some GOOD Examples:
+```json
+[
+    {
+        "background": "A bustling city street during rush hour, with pedestrians walking past stores and cars honking in traffic. The image depicts the first-person view of the character.",
+        "goal": "The character is trying to catch a bus before it leaves.",
+        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
+    },
+    {
+        "background": "An open-plan corporate office during a busy afternoon, with cubicles neatly separated by dividing screens and personal photos decorating the workspace walls. The image depicts the first-person view of the character.",
+        "goal": "The character is trying to send an email to his boss.",
+        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
+    }, 
+    {
+        "background": "A bright and inviting kitchen featuring wooden cabinetry, a cozy dining area, and fresh fruit adding a vibrant touch. The image depicts the first-person view of the character",
+        "goal": "The character is hungry and tries to eat something.",
+        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
+    },
+    {
+        "background": "A modest bathroom showing signs of wear, featuring basic fixtures, white tiles, and a shower area needing repairs.",
+        "goal": "The character just woke up and wanted to wash his face.",
+        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
+    },
+    {
+        "background": "A modern kitchen with stainless steel appliances, wooden cabinets, and a countertop filled with various cooking utensils.",
+        "goal": "The character is blind and stumbled into the kitchen. He is trying to find his way out of the kitchen.",
+        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
+    }
+]
+
+
+
+Please generate five contexts based on the image information. Please make sure the contexts include only limited specific descriptions of object features in the image and stay as high-level glimpses without revealing too many observational details. Make sure the contexts are diverse and not redundant.
+
+For each context, also select ALL the relevant object nodes from the image that are related to the background or goal. These objects will be used to generate evaluation questions. Select objects in order of relevancy, with the most relevant first.
+Be comprehensive in your selection to ensure all pertinent objects are included. And include any objects that are closely related in terms of same type or same bbox location.
+
+========================
+WHAT TO PRODUCE
+========================
+Return EXACTLY a JSON list with FIVE dictionaries. Each dictionary must contain:
+- "background": <50 words, first-person situation, plausible real-world setting>
+- "goal": a concrete objective that can be progressed by asking image-grounded questions
+- "relevant_objects": a list of object_ids (from the image information) that are most relevant to this context, ordered by relevancy
+
+Output format (STRICT):
+```json
+[
+  {"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]},
+  {"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]},
+  {"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]},
+  {"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]},
+  {"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]}
+]
+```
+You MUST only respond in the format as described above. DO NOT RESPOND WITH ANYTHING ELSE.
+
+================================================================================
+CALL 2: Switch — decide next question type (GPT-4o, round 2)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+Based on the given conversation history, please decide which type of question to ask next. Please choose one of the following types of questions:
+
+1. **Regular questions** – directly related to the image and context.
+    *Example*: In an office setting, the goal of the conversation is to send an email to his boss. You can ask questions like "is the monitor turned on?", "where is the power button of the computer?", "I want to type in the email, what should I look for?", etc.
+
+2. **Follow-up questions** – follow up, confirm or interrogate the model's last response to test the confidence of the model's answer or to ask for further challenging details when available.
+   *Example*: If the model correctly identifies there's no fork on the table, you may ask: *"Are you sure there isn't a fork on the table to cut the cake?"*
+
+3. **Adversarial questions** – inquire about plausible but absent objects that commonly co-occur with visible ones in the image.
+    *Example*: If the image shows a cake without utensils, you may ask: *"Can I use the knife on the table to cut the cake?"* or *"Is there a fork?"*
+
+4. **Unanswerable questions** – ask about question that cannot be answered.
+   *Example*: if the image depicts a cake on the table without any utensil or people eating the cake, you can ask "What utensil is the man using to cut the cake?". This is an unanswerable question because you cannot answer with an utensil but rather you should answer "There are not any man in the image eating the cake".
+
+Given the previously asked question types: [1, 1], try to ask diverse types of questions.
+
+YOU CAN ONLY SELECT ONE OF THE ABOVE FOUR TYPES OF NEXT-STEPS !!
+Respond format: think thoroughly to reason or perform chain-of-thought to select the next question type. 
+However, you MUST eventually provide a digit between 1 and 4 in below json format to instruct the next round:
+```json
+{"type": type_id}
+```
+
+
+================================================================================
+CALL 3: ask_regular — generate regular question (GPT-4o)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+You are tasked with generating a *regular question* grounded in the provided image and context.
+
+* **Target node:** `Object(object_id=18, x=574, y=327, w=32, h=143, names=['parking meter'], synsets=['parking_meter.n.01'], attributes=['orange'])`
+* **Context:** background: `A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character.`, goal: `The character is looking for the nearest parking meter to pay for street parking.`
+
+**Instructions:**
+
+* Ask a natural, conversational question about the specified node.
+* The question must be strongly relevant to both the image and the context (background + goal).
+* Avoid irrelevant, generic, or out-of-character questions.
+* Keep the question consistent with the role of someone actively engaged in the situation.
+* Generate the ground-truth answer based on the given image content along the question.
+* **CRITICAL: Do NOT repeat or ask questions with the same meaning as any prior questions in the conversation history.**
+
+**Previously asked questions (DO NOT repeat these or ask similar questions):**
+[
+  "What does the parking meter near the sidewalk look like?",
+  "Is the car next to the parking meter currently parked there?"
+]
+
+**Example:**
+If the background is an office and the goal is “send an email to the boss,” suitable questions include:
+
+* {"question": "Is the monitor turned on?", "gt": "No"}
+* {"question": "Where is the computer’s power button?", "gt": "It's on the computer under the table to the right of the image."}
+* {"question": "I want to type the email—what should I look for?", "gt": "You should look for the keyboard and mouse on the table in front of the monitor."}
+
+**Output Requirement:**
+Respond in the following json format:
+```json
+{"question": "xxxx", "gt": "xxxx"},
+```
+
+Respond with **the question and gt ONLY**. Do not include explanations, commentary, or any additional text.
+
+
+================================================================================
+CALL 4: ask_follow_up — generate follow-up question (GPT-4o)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+Based on the given image, context, and the conversation history, please ask a follow-up question about the model's last turn of conversation and the corresponding ground-truth answer.
+The follow-up question can be to ask for further challenging details when available or to interrogate the model's confidence in its previous correct answer.
+
+**Interrogate Type Requirement:**
+Only apply this follow-up type if the model correctly answered the previous question. We then want to test whether the confidence of the model's answer is low despite misleading subjective or peripheral evidence.
+- Challenge or verify the model's previous answer
+- Probe for more details
+- Test consistency
+- Question contradictions
+
+**Example follow-ups:**
+- After any answer: "Are you sure about [the specific detail they mentioned]?" like "Are you sure the color is [the color they mentioned]? I see it's actually [random other color]."
+- Challenging with visible evidence if last answer is non-existent: "I actually see a [the questioned item] near/around [co-occurring object/resonable location], are you sure you can't see [the questioned item]?"
+- Requesting clarification: "You mentioned [X], but can you describe it more precisely?"
+- Testing consistency: "Earlier you said [Y], how does that relate to what you just said?"
+
+You should ask the question as if you are having a conversation with the model. You should also follow the above requirements.
+Please respond in the following format:
+```json
+{{"question": "xxxx", "gt": "xxxx"}},
+```
+Please respond with the question and the ground-truth answer ONLY. DO NOT respond with anything else.
+
+
+================================================================================
+CALL 5: ask_adversarial — generate adversarial question (GPT-4o)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+Based on the given image, context, and the conversation history, please ask an adversarial question about ONE plausible scenario/object that commonly co-occur with visible feature(s) in the image but currently isn't present (the ground truth answer is always 'No').
+
+Requirements:
+1) Your generated hallucinated scenario/object and the final adversarial question should be also consistent with the context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+2) Your generated hallucinated scenario/object should not be present in the image but should highly co-occur with image content.
+3) ENCOURAGED if possible: Include an inductive clause that briefly mentions visible objects as part of the existence question (e.g., "To help cut the cake on the table, is there a knife present?").
+4) **CRITICAL: Do NOT repeat or ask questions that are similar to any prior questions in the conversation history.**
+
+**Previously asked questions (DO NOT repeat these or ask similar questions):**
+None
+
+Please output the hallucinated scenario/object as scene graph elements"names"/"attributes"/"relations" and the corresponding question in the form of a json dict.
+
+Examples:
+If there is a blue banana on the table while banana should usually be yellow.
+```json
+{"names": "banana", "attributes": "yellow", "question": "Is there a yellow banana present on the table?"}
+```
+If there is cake on the table, which is usually accompanied by a knife but currently isn't.
+```json
+{"names": "knife", "question": "Is there a knife present on the table?"}
+```
+
+Allowed keys in the JSON output are "names", "attributes", "relations", and "question".
+
+
+================================================================================
+CALL 6: ask_unanswerable step 1 — hallucinate object (GPT-4o)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+Based on the given image, context, and conversation history, generate an **unanswerable question**.
+
+Here is the context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+An *unanswerable question* refers to a query that cannot be answered using the provided information because it introduces a plausible but absent or incorrect object, attribute, or relation.
+For example, if the image shows only a cake on the table, asking *"What utensil is the man using to cut the cake?"* is unanswerable since no man is present.
+
+**Procedure:**
+
+1. **Hallucinated Object:** Generate a plausible but absent or incorrect object that would typically co-occur with image content. Output in JSON format:
+
+   ```json
+   {"names": "object_name"}
+   ```
+
+2. **Hallucinated Relation/Attribute:** Generate a plausible relation or attribute involving the hallucinated object. Here the relation should link the hallucinated object to an actual object from the image. Output in JSON format:
+
+   ```json
+   {"relations": "relation", "object": "real_object", "subject": "hallucinated_object"}
+   ```
+
+3. **Unanswerable Question:** Formulate a natural question about this hallucinated relation or attribute. The question should sound plausible but must be unanswerable from the provided image.
+
+**Example Walkthrough:**
+
+* Image: A cake on the table, no people visible.
+* Step 1:
+
+  ```json
+  {"names": "man"}
+  ```
+* Step 2:
+
+  ```json
+  {"relations": "eating", "object": "cake", "subject": "man"}
+  ```
+* Step 3: ask the unanswerable question about the relation with corresponding ground-truth answer: "eating" between the generated object "man" and the object "cake": “What utensil is the man using to cut the cake?”*
+
+  ```json
+  {"question": "What utensil is the man using to cut the cake?", "gt": "There are not any man in the image eating the cake"}
+  ```
+---
+
+**CRITICAL - Avoid Repetition:**
+**The SAME hallucinated object in previously asked unanswerable questions also counts as repetition. For example, if you previously asked about "the man's shirt color", do NOT ask about "the man's position" or any other feature of "the man". You MUST introduce a NEW hallucinated object.**
+None
+
+
+**Your Task Now:**
+Complete **Step 1** by generating a plausible but absent or incorrect object in JSON format.
+
+
+================================================================================
+CALL 7: ask_unanswerable step 2 — hallucinate relation (GPT-4o)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+Based on the given image, context, and conversation history, generate an **unanswerable question**.
+
+Here is the context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+An *unanswerable question* refers to a query that cannot be answered using the provided information because it introduces a plausible but absent or incorrect object, attribute, or relation.
+For example, if the image shows only a cake on the table, asking *"What utensil is the man using to cut the cake?"* is unanswerable since no man is present.
+
+**Procedure:**
+
+1. **Hallucinated Object:** Generate a plausible but absent or incorrect object that would typically co-occur with image content. Output in JSON format:
+
+   ```json
+   {"names": "object_name"}
+   ```
+
+2. **Hallucinated Relation/Attribute:** Generate a plausible relation or attribute involving the hallucinated object. Here the relation should link the hallucinated object to an actual object from the image. Output in JSON format:
+
+   ```json
+   {"relations": "relation", "object": "real_object", "subject": "hallucinated_object"}
+   ```
+
+3. **Unanswerable Question:** Formulate a natural question about this hallucinated relation or attribute. The question should sound plausible but must be unanswerable from the provided image.
+
+**Example Walkthrough:**
+
+* Image: A cake on the table, no people visible.
+* Step 1:
+
+  ```json
+  {"names": "man"}
+  ```
+* Step 2:
+
+  ```json
+  {"relations": "eating", "object": "cake", "subject": "man"}
+  ```
+* Step 3: ask the unanswerable question about the relation with corresponding ground-truth answer: "eating" between the generated object "man" and the object "cake": “What utensil is the man using to cut the cake?”*
+
+  ```json
+  {"question": "What utensil is the man using to cut the cake?", "gt": "There are not any man in the image eating the cake"}
+  ```
+---
+
+**CRITICAL - Avoid Repetition:**
+**The SAME hallucinated object in previously asked unanswerable questions also counts as repetition. For example, if you previously asked about "the man's shirt color", do NOT ask about "the man's position" or any other feature of "the man". You MUST introduce a NEW hallucinated object.**
+None
+
+
+**Your Task Now:**
+Complete **Step 1** by generating a plausible but absent or incorrect object in JSON format.
+
+
+--- messages[6] role=assistant ---
+{"names": "bicycle rack"}
+
+--- messages[7] role=user ---
+Now complete Step 2. Generate a plausible attribute or relation for the hallucinated object you created in Step 1. This relation must link the hallucinated object to one of the real objects present in the image.
+
+================================================================================
+CALL 8: ask_unanswerable step 3 — form trap question (GPT-4o)
+Model: gpt-4o
+================================================================================
+
+--- messages[0] role=system ---
+Your task is to **simulate a multi-round conversation with a vision-language model (VLM) about a given image**, in order to test whether the model hallucinates (i.e., produces responses inconsistent with the image) or remains faithful to it.
+**Ultimate Goal:** Raise challenging visual questions and probe as many hallucinations from the responding model as possible.
+
+You will have multiple rounds of conversations with the model. In each round, you will be provided with:
+
+* **An image** (represented as a list of objects, their attributes, and relationships).
+* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+
+Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
+
+Requirements
+
+1. **Multi-turn conversation**:
+
+    * Ask one question per turn, then wait for the model’s response.
+    * Incorporate the image, context, and dialogue history when forming your question.
+
+2. **Natural, human-like tone**:
+
+    * Speak as if conversing casually with another person.
+    * Avoid mechanical or scripted phrasing.
+
+3. **No disclosure of metadata**:
+
+    * Do not reveal or reference bounding boxes, object lists, captions, or the source of your information.
+    * Ask questions as if you are looking at the image with NO access to the bounding boxes, object lists, or captions.
+
+4. **Handling mistakes**:
+
+    * Do not correct the model if they make mistakes. 
+    * However, you may ask follow-ups to probe or interrogate its response.
+
+5. **Question style**:
+
+    * Prefer open-ended questions over yes/no questions.
+    * Ask diverse, non-redundant questions.
+    * Only ask questions with **definite answers** (either clearly present in the image or confidently absent).
+
+6. **Conversation ending**:
+
+    * If the dialogue has naturally run its course, output **“END”** (and nothing else).
+
+Image information:
+Instances:
+instance 0, clock, bbox: (0.53, 0.15, 0.62, 0.72), attributes: green, tall
+instance 1, street, bbox: (0.10, 0.55, 0.99, 0.98), attributes: sidewalk
+instance 2, shade, bbox: (0.15, 0.56, 0.49, 0.88), attributes: none
+instance 3, man, bbox: (0.30, 0.41, 0.37, 0.85), attributes: none
+instance 4, sneakers, bbox: (0.30, 0.81, 0.37, 0.86), attributes: grey
+instance 5, headlight, bbox: (0.64, 0.61, 0.67, 0.64), attributes: off
+instance 6, car, bbox: (0.60, 0.53, 0.69, 0.69), attributes: none
+instance 7, bike, bbox: (0.40, 0.53, 0.43, 0.59), attributes: parked, far away
+instance 8, bike, bbox: (0.42, 0.53, 0.45, 0.59), attributes: parked, far away, chained
+instance 9, sign, bbox: (0.15, 0.02, 0.26, 0.33), attributes: black
+instance 10, building, bbox: (0.00, 0.00, 0.27, 0.90), attributes: tall, brick, made of bricks
+instance 11, tree trunk, bbox: (0.78, 0.39, 0.89, 0.94), attributes: none
+instance 12, sidewalk, bbox: (0.10, 0.55, 1.00, 0.99), attributes: brick
+instance 13, shirt, bbox: (0.30, 0.48, 0.38, 0.65), attributes: red, orange
+instance 14, street, bbox: (0.45, 0.47, 1.00, 0.86), attributes: clean
+instance 15, car, bbox: (0.89, 0.57, 1.00, 0.86), attributes: white, parked
+instance 16, back, bbox: (0.90, 0.56, 0.98, 0.85), attributes: none
+instance 17, glasses, bbox: (0.34, 0.45, 0.36, 0.47), attributes: none
+instance 18, parking meter, bbox: (0.72, 0.55, 0.76, 0.78), attributes: orange
+instance 19, shoes, bbox: (0.49, 0.80, 0.55, 0.86), attributes: brown
+instance 20, man, bbox: (0.47, 0.44, 0.56, 0.86), attributes: none
+instance 21, pants, bbox: (0.31, 0.64, 0.35, 0.84), attributes: black
+instance 22, jacket, bbox: (0.45, 0.49, 0.56, 0.66), attributes: gray, grey
+instance 23, pants, bbox: (0.48, 0.61, 0.55, 0.83), attributes: gray, grey
+instance 24, work truck, bbox: (0.65, 0.45, 0.98, 0.76), attributes: white
+instance 25, sidewalk, bbox: (0.43, 0.53, 0.49, 0.84), attributes: none
+instance 26, chin, bbox: (0.50, 0.48, 0.51, 0.49), attributes: raised
+instance 27, guy, bbox: (0.46, 0.44, 0.56, 0.86), attributes: none
+instance 28, van, bbox: (0.66, 0.50, 0.95, 0.72), attributes: parked, white
+instance 29, wall, bbox: (0.00, 0.00, 0.17, 0.89), attributes: grey
+instance 30, tree, bbox: (0.31, 0.00, 0.53, 0.60), attributes: none
+instance 31, bikes, bbox: (0.40, 0.53, 0.45, 0.59), attributes: none
+instance 32, arm, bbox: (0.46, 0.47, 0.50, 0.54), attributes: raised
+instance 33, shirt, bbox: (0.48, 0.51, 0.53, 0.62), attributes: grey
+instance 34, man, bbox: (0.45, 0.44, 0.57, 0.85), attributes: none
+instance 35, man, bbox: (0.29, 0.42, 0.38, 0.86), attributes: none
+instance 36, road, bbox: (0.54, 0.49, 0.97, 0.85), attributes: none
+instance 37, lamp post, bbox: (0.67, 0.10, 0.72, 0.82), attributes: none
+instance 38, trees, bbox: (0.24, 0.00, 0.99, 0.93), attributes: sparse
+instance 39, windows, bbox: (0.75, 0.01, 0.97, 0.25), attributes: none
+
+Relation between the above instances:
+shade (instance 2) on street (instance 1)
+man (instance 3) wears sneakers (instance 4)
+car (instance 6) has headlight (instance 5)
+sign (instance 9) on building (instance 10)
+tree trunk (instance 11) on sidewalk (instance 12)
+man (instance 3) has shirt (instance 13)
+sidewalk (instance 12) next to street (instance 14)
+car (instance 15) has back (instance 16)
+man (instance 3) has glasses (instance 17)
+parking meter (instance 18) on sidewalk (instance 12)
+man (instance 3) wears sneakers (instance 4)
+man (instance 20) has shoes (instance 19)
+man (instance 3) has shirt (instance 13)
+man (instance 3) wears pants (instance 21)
+man (instance 20) has jacket (instance 22)
+man (instance 20) has pants (instance 23)
+bike (instance 7) parked on sidewalk (instance 12)
+bike (instance 8) parked on sidewalk (instance 12)
+work truck (instance 24) parked on street (instance 14)
+car (instance 15) parked on street (instance 14)
+bike (instance 8) on sidewalk (instance 25)
+parking meter (instance 18) behind man (instance 20)
+guy (instance 27) holding chin (instance 26)
+man (instance 3) wearing shirt (instance 13)
+man (instance 20) holding chin (instance 26)
+bikes (instance 31) near tree (instance 30)
+man (instance 20) wearing shoes (instance 19)
+bikes (instance 31) near tree (instance 30)
+shirt (instance 13) on man (instance 3)
+man (instance 34) holding chin (instance 26)
+man (instance 35) wearing glasses (instance 17)
+lamp post (instance 37) along road (instance 36)
+man (instance 3) in shirt (instance 13)
+man (instance 3) wearing pants (instance 21)
+parking meter (instance 18) on top of street (instance 14)
+tree (instance 30) next to street (instance 14)
+man (instance 3) wearing glasses (instance 17)
+bikes (instance 31) behind man (instance 3)
+trees (instance 38) by sidewalk (instance 12)
+man (instance 20) wearing jacket (instance 22)
+building (instance 10) with windows (instance 39)
+
+
+
+Context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+
+--- messages[1] role=assistant ---
+What does the parking meter near the sidewalk look like?
+
+--- messages[2] role=user ---
+the parking meter is orange and located on the right side of the sidewalk, close to the street.
+
+--- messages[3] role=assistant ---
+Is the car next to the parking meter currently parked there?
+
+--- messages[4] role=user ---
+yes, there is a white car parked on the street near the parking meter.
+
+--- messages[5] role=user ---
+Based on the given image, context, and conversation history, generate an **unanswerable question**.
+
+Here is the context:
+background: A busy city sidewalk during the afternoon, with pedestrians walking past parked cars and tall brick buildings. The image depicts the first-person view of the character., goal: The character is looking for the nearest parking meter to pay for street parking.
+
+An *unanswerable question* refers to a query that cannot be answered using the provided information because it introduces a plausible but absent or incorrect object, attribute, or relation.
+For example, if the image shows only a cake on the table, asking *"What utensil is the man using to cut the cake?"* is unanswerable since no man is present.
+
+**Procedure:**
+
+1. **Hallucinated Object:** Generate a plausible but absent or incorrect object that would typically co-occur with image content. Output in JSON format:
+
+   ```json
+   {"names": "object_name"}
+   ```
+
+2. **Hallucinated Relation/Attribute:** Generate a plausible relation or attribute involving the hallucinated object. Here the relation should link the hallucinated object to an actual object from the image. Output in JSON format:
+
+   ```json
+   {"relations": "relation", "object": "real_object", "subject": "hallucinated_object"}
+   ```
+
+3. **Unanswerable Question:** Formulate a natural question about this hallucinated relation or attribute. The question should sound plausible but must be unanswerable from the provided image.
+
+**Example Walkthrough:**
+
+* Image: A cake on the table, no people visible.
+* Step 1:
+
+  ```json
+  {"names": "man"}
+  ```
+* Step 2:
+
+  ```json
+  {"relations": "eating", "object": "cake", "subject": "man"}
+  ```
+* Step 3: ask the unanswerable question about the relation with corresponding ground-truth answer: "eating" between the generated object "man" and the object "cake": “What utensil is the man using to cut the cake?”*
+
+  ```json
+  {"question": "What utensil is the man using to cut the cake?", "gt": "There are not any man in the image eating the cake"}
+  ```
+---
+
+**CRITICAL - Avoid Repetition:**
+**The SAME hallucinated object in previously asked unanswerable questions also counts as repetition. For example, if you previously asked about "the man's shirt color", do NOT ask about "the man's position" or any other feature of "the man". You MUST introduce a NEW hallucinated object.**
+None
+
+
+**Your Task Now:**
+Complete **Step 1** by generating a plausible but absent or incorrect object in JSON format.
+
+
+--- messages[6] role=assistant ---
+{"names": "bicycle rack"}
+
+--- messages[7] role=user ---
+Now complete Step 2. Generate a plausible attribute or relation for the hallucinated object you created in Step 1. This relation must link the hallucinated object to one of the real objects present in the image.
+
+--- messages[8] role=assistant ---
+{"relations": "next to", "object": "parking meter", "subject": "bicycle rack"}
+
+--- messages[9] role=user ---
+Now complete Step 3. You must ask an **UNANSWERABLE question** about the hallucinated relation/attribute you generated, and provide the corresponding ground-truth answer (gt).
+
+CRITICAL GOAL (Separation Guarantee):
+This must be an **UNANSWERABLE (presuppositional trap) question** that **DOES presuppose** the hallucinated object/relation/attribute exists in the image.
+The question must sound plausible, but it cannot be answered from the provided image because the key premise is false/absent.
+
+Hard Requirements (MUST follow):
+1) **Strong presupposition is mandatory**
+   - You MUST write the question as if the hallucinated object/relation is definitely there.
+   - Use definite references and presuppositional phrasing, e.g.:
+     "the", "that", "the one on the table", "the person", "the knife next to..."
+   - The question should demand a **specific detail** that cannot be provided if the object is absent:
+     color, exact location, count, identity, orientation, precise relation, etc.
+
+2) **No hedging / no conditional phrasing**
+   - DO NOT use: "is there any", "do you see", "if there is", "might", "maybe".
+   - This is a trap question: it should *assume* existence.
+
+3) **Ground-truth answer must explicitly correct the false premise**
+   - The gt MUST point out the absence / invalid premise clearly, e.g.:
+     "There is no X in the image."
+     "I do not see X, so I cannot answer that."
+     "No person is visible interacting with Y."
+   - Do not invent details to satisfy the question.
+
+4) **Consistency with context and conversation**
+   - The question must be consistent with the context (background + goal) and conversation history, even though it is unanswerable.
+
+**Previously asked questions (DO NOT repeat these or ask similar questions):**
+None
+
+Good Unanswerable Question Templates (Examples):
+- Definite reference + attribute detail:
+  * {"question": "What color is the handle of the knife on the table?"}
+- Definite reference + relation detail:
+  * {"question": "Which side of the cake is the fork placed on—left or right?"}
+- Definite reference + human interaction detail (only if the image has no humans; this makes it unanswerable):
+  * {"question": "What utensil is the man using to cut the cake?"}
+
+Bad (DISALLOWED) Examples (these would overlap with ADVERSARIAL):
+- "Do you see any knife we could use?" (non-presuppositional)
+- "If there is a fork, where might it be?" (conditional)
+
+Output Requirement:
+Respond in the following json format:
+```json
+{"question": "xxxx"}
+```
+
+Respond with **the question ONLY**. Do not include explanations, commentary, or any additional text.
+

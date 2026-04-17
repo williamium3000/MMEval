@@ -3,9 +3,32 @@ from functools import partial
 import torch
 
 
+def _is_api_model(model_path: str) -> bool:
+    return model_path.startswith(("openai/", "gemini/", "zhipu/", "minimax/"))
+
+
+def _load_api_model(args):
+    from .api_vlm import OpenAIVisionProvider, GeminiVisionProvider, ZhipuVisionProvider, MiniMaxVisionProvider
+
+    if args.model_path.startswith("openai/"):
+        model = args.model_path.split("/", 1)[1]
+        return OpenAIVisionProvider(model=model)
+    if args.model_path.startswith("gemini/"):
+        model = args.model_path.split("/", 1)[1]
+        return GeminiVisionProvider(model=model)
+    if args.model_path.startswith("zhipu/"):
+        model = args.model_path.split("/", 1)[1]
+        return ZhipuVisionProvider(model=model)
+    if args.model_path.startswith("minimax/"):
+        model = args.model_path.split("/", 1)[1]
+        return MiniMaxVisionProvider(model=model)
+    raise NotImplementedError(f"Unknown API model prefix in model_path={args.model_path!r}")
+
 
 def load_model(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if _is_api_model(args.model_path):
+        return _load_api_model(args)
     if "opera" in args.model_path:
         from .infer_opera import eval_model as eval_model_opera, setup_seeds, MODEL_EVAL_CONFIG_PATH, load_preprocess
         from minigpt4.common.config import Config

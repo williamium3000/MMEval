@@ -100,5 +100,76 @@ def format_case_vg(case, use_region=False):
             formatted += f"description: {reg['phrase']}, bbox: ({x1:.2f}, {y1:.2f}, {x2:.2f}, {y2:.2f})\n"
     
     return formatted
+# Noisy VG object names that are attribute fragments, not real objects
+NOISY_OBJECT_NAMES = frozenset({
+    "color", "colour", "colors", "colours",
+})
+
+
+def format_case_vg_compact(case, use_region=False):
+    """Compact VG formatter for v19 — same info, ~50% fewer tokens.
+
+    Changes vs format_case_vg:
+    - Drop 'instance' prefix: '0: clock [.53,.15,.62,.72] green, tall'
+    - 2-decimal bbox in bracket notation, no 'bbox:' label
+    - Omit attributes field entirely when empty (instead of 'attributes: none')
+    - Filter out noisy pseudo-objects (color/colour)
+    - Deduplicate relations
+    - Relations use IDs only: '0 on 1' (names already in Objects section)
+    """
+    H = case["height"]
+    W = case["width"]
+    sg = case["sg"]
+
+    formatted = "Objects:\n"
+    valid_ids = set()
+    for ori_id, ins in sg["objects"].items():
+        object_id = ins["object_id"]
+        name = ins["names"][0]
+        if name.lower() in NOISY_OBJECT_NAMES:
+            continue
+        valid_ids.add(object_id)
+        x, y, w, h = ins['x'], ins['y'], ins['w'], ins['h']
+        x1, y1, x2, y2 = x / W, y / H, (x + w) / W, (y + h) / H
+        attrs = ins.get("attributes", [])
+        if attrs:
+            formatted += f"{object_id}: {name} [{x1:.2f},{y1:.2f},{x2:.2f},{y2:.2f}] {', '.join(attrs)}\n"
+        else:
+            formatted += f"{object_id}: {name} [{x1:.2f},{y1:.2f},{x2:.2f},{y2:.2f}]\n"
+
+    formatted += "\nRelations:\n"
+    seen_rels = set()
+    for rel in sg["relationships"]:
+        sub_id = rel['subject']['object_id']
+        obj_id = rel['object']['object_id']
+        pred = rel['predicate'].lower()
+        if sub_id not in valid_ids or obj_id not in valid_ids:
+            continue
+        key = (sub_id, pred, obj_id)
+        if key in seen_rels:
+            continue
+        seen_rels.add(key)
+        formatted += f"{sub_id} {pred} {obj_id}\n"
+
+    if use_region:
+        formatted += "\nRegions:\n"
+        for reg in case["metadata"]["regions"]:
+            x, y, w, h = reg['x'], reg['y'], reg['width'], reg['height']
+            x1, y1, x2, y2 = x / W, y / H, (x + w) / W, (y + h) / H
+            formatted += f"{reg['phrase']} [{x1:.2f},{y1:.2f},{x2:.2f},{y2:.2f}]\n"
+
+    return formatted
+
+
 if __name__ == "__main__":
-    print(format_case_vg(load_vg(num_samples=5)[0]))
+    case = load_vg(num_samples=5)[0]
+    print("=== ORIGINAL ===")
+    orig = format_case_vg(case)
+    print(orig)
+    print(f"Chars: {len(orig)}, ~Tokens: {len(orig)//4}")
+    print()
+    print("=== COMPACT ===")
+    comp = format_case_vg_compact(case)
+    print(comp)
+    print(f"Chars: {len(comp)}, ~Tokens: {len(comp)//4}")
+    print(f"Reduction: {(1 - len(comp)/len(orig))*100:.1f}%")
