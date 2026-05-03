@@ -456,7 +456,7 @@ Q_TYPE_MAPPING = {
 class EvalSample:
     def __init__(self, case, llm_chat_context, llm_chat_conv, eval_func):
         self.case = case
-        self.image_info = format_case_vg(case) if args.dataset == "vg" else format_case_coco(case)
+        self.image_info = format_case_vg(case) if args.dataset in ("vg", "svg") else format_case_coco(case)
         self.scene_graph_data = SceneGraphData.from_dict(case)
 
         self.llm_chat_context = llm_chat_context  # GPT-5 for context generation
@@ -488,14 +488,19 @@ class EvalSample:
         prev_questions_str = json.dumps(self.repeat_ref_dict["regular"], indent=2) if self.repeat_ref_dict["regular"] else "None"
         conversations.append({"role": "user", "content": REGULAR_CONV_PROMPT.format(sampled_node, context["background"], context["goal"], prev_questions_str)})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        # Defensive: if all parser retries failed, LLMChat returns None.
+        if not isinstance(message, dict):
+            message = {"question": "Describe what you see in this scene.", "gt": ""}
         # Track this question to prevent repetition
         self.repeat_ref_dict["regular"].append(message.get("question", ""))
         return message
-    
+
     def ask_follow_up(self, conversations, context):
         conversations = copy.deepcopy(conversations)
         conversations.append({"role": "user", "content": FOLLOW_UP_CONV_PROMPT})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        if not isinstance(message, dict):
+            message = {"question": "Can you elaborate?", "gt": ""}
         return message
     
     def ask_unanswerable(self, conversations, context):
@@ -513,6 +518,9 @@ class EvalSample:
         prev_questions_str = json.dumps(self.repeat_ref_dict["unanswerable"], indent=2) if self.repeat_ref_dict["unanswerable"] else "None"
         conversations.append({"role": "user", "content": UNANSWERABLE_CONV_PROMPT3.format(prev_questions_str)})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        if not isinstance(message, dict):
+            message = {"question": "What color is the missing object next to the visible item?",
+                       "gt": "I can't answer the question because the object doesn't exist."}
         # Default gt to standard message for unanswerable questions
         if "gt" not in message:
             message["gt"] = "I can't answer the question because the object doesn't exist."
@@ -527,6 +535,8 @@ class EvalSample:
         prev_questions_str = json.dumps(self.repeat_ref_dict["adversarial"], indent=2) if self.repeat_ref_dict["adversarial"] else "None"
         conversations.append({"role": "user", "content": ADVERSARIAL_CONV_PROMPT1.format(context["background"], context["goal"], prev_questions_str)})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        if not isinstance(message, dict):
+            message = {"question": "Is there a missing object that doesn't belong?", "gt": "No"}
         # Default gt to 'No' for adversarial questions
         if "gt" not in message:
             message["gt"] = "No"
@@ -546,7 +556,7 @@ class EvalSample:
         Returns:
             List of contexts (either 2 new contexts, or remaining contexts if previous_contexts provided)
         """
-        image_info = format_case_vg(case) if args.dataset == "vg" else format_case_coco(case)
+        image_info = format_case_vg(case) if args.dataset in ("vg", "svg") else format_case_coco(case)
         
         if previous_contexts is not None and len(previous_contexts) > 0:
             # Generate remaining contexts, using existing contexts for diversity

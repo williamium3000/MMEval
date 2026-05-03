@@ -108,8 +108,9 @@ run_job() {
       fi
     fi
 
+    # API-only jobs: no GPU needed; use any env with openai+requests+PIL+nltk.
     # shellcheck disable=SC2086
-    python "${RUN_FILE}" \
+    /raid/icy/iris/.conda/envs/coneval-haelm/bin/python "${RUN_FILE}" \
       --dataset "${DATASET}" \
       --num_samples "${NUM_SAMPLES}" \
       --max_rounds "${MAX_ROUNDS}" \
@@ -120,18 +121,20 @@ run_job() {
   ) >"${logfile}" 2>&1 &
 }
 
-# One newer model per provider (as of 2026 docs):
-# - OpenAI: gpt-5.4-mini (all latest models support vision via Responses API)
-# - Gemini: gemini-2.5-flash-image (GA, optimized for image understanding)
-# - Zhipu: glm-5v-turbo (multimodal VLM)
-run_job "openai_gpt-5.4-mini" "openai/gpt-5.4-mini" "OPENAI_API_KEY"
-run_job "openai_gpt-4o" "openai/gpt-4o" "OPENAI_API_KEY"
-run_job "gemini_gemini-2.5-flash-image" "gemini/gemini-2.5-flash-image" "GEMINI_API_KEY"
+# All routed through uniapi gateway (OpenAI-compatible /chat/completions).
+# parity/Harbor was retired — uniapi serves the same OpenAI + Gemini surface.
+# - gpt-4o, gpt-5.4-mini are normal vision models on uniapi
+# - gemini-2.5-flash is the regular vision-capable Gemini (NOT the image-gen
+#   gemini-2.5-flash-image which produces base64 PNG bytes as "responses")
+# - zhipu/glm-5v-turbo continues via Zhipu native endpoint (kept as-is for now)
+run_job "openai_gpt-5.4-mini" "uniapi/gpt-5.4-mini" "UNIAPI_API_KEY"
+run_job "openai_gpt-4o" "uniapi/gpt-4o" "UNIAPI_API_KEY"
+run_job "gemini_gemini-2.5-flash" "uniapi/gemini-2.5-flash" "UNIAPI_API_KEY"
 run_job "zhipu_glm-5v-turbo" "zhipu/glm-5v-turbo" "ZHIPU_API_KEY"
 
 wait
 
-echo "All v19 API parallel jobs completed."
-echo "Outputs in: ${SAVE_DIR}"
-echo "Logs in   : ${LOG_DIR}"
+echo "All v19 API VG jobs completed."
+echo "VG outputs in: work_dirs/vg/v19_api"
+# SVG block removed by user request — VG only.
 

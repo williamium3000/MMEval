@@ -653,6 +653,7 @@ if __name__ == "__main__":
     parser.add_argument('--flush_interval', type=int, default=0, help='每处理 N 个样本就将当前结果写回一次 (0 表示只在最后写一次)')
     parser.add_argument('--random_sample', action='store_true', help='Randomly shuffle samples before selecting sample_num (for consistency testing across runs)')
     parser.add_argument('--random_seed', type=int, default=None, help='Random seed for --random_sample (default: None = different each run)')
+    parser.add_argument('--llm_model', type=str, default='gpt-5', help='LLM model name passed to LLMChat for SG parsing (e.g. Qwen3-30B-A3B-Instruct-2507)')
     args = parser.parse_args()
 
     samples = json.load(open(args.conv_script, "r"))
@@ -694,7 +695,7 @@ if __name__ == "__main__":
         need_parse = not (samples_to_process and any(s.get("unique_sg") for s in samples_to_process))
         if need_parse:
             print("Step 1: Batch parsing scene graphs...")
-            agent = LLMChat("gpt-5")
+            agent = LLMChat(args.llm_model)
             batch_results = batch_parse_scene_graph(samples_to_process, agent, max_workers=args.max_workers)
             for sample_idx, (sg_dict, unique_sg) in batch_results.items():
                 samples_to_process[sample_idx]["unique_sg"] = list(unique_sg)

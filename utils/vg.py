@@ -1,61 +1,190 @@
-from datasets import load_dataset
 import tqdm
-import fsspec
-import aiohttp
+import os
+import json
+import zipfile
+import urllib.request
 
-# Load the dataset with the specified download configuration
-objects = load_dataset("visual_genome","objects_v1.2.0", trust_remote_code=True, split="train", storage_options={'client_kwargs': {'timeout': aiohttp.ClientTimeout(total=7200)}})
-attributes = load_dataset("visual_genome","attributes_v1.2.0", split="train", trust_remote_code=True)
-relationships = load_dataset("visual_genome","relationships_v1.2.0", split="train", trust_remote_code=True)
-regions = load_dataset("visual_genome","region_descriptions_v1.2.0", split="train", trust_remote_code=True)
+# Raw JSON files from the official Visual Genome website
+VG_BASE_URL = "https://homes.cs.washington.edu/~ranjay/visualgenome/data/dataset"
+VG_CACHE_DIR = os.path.join(os.path.dirname(__file__), ".vg_cache")
 
-# ['region_descriptions_v1.0.0', 
-# 'region_descriptions_v1.2.0', 
-# 'question_answers_v1.0.0', 
-# 'question_answers_v1.2.0', 
-# 'objects_v1.0.0', 'objects_v1.2.0', 'attributes_v1.0.0', 'attributes_v1.2.0', 
-# 'relationships_v1.0.0', 'relationships_v1.2.0']
+_VG_FILES = {
+    "objects":       "objects.json.zip",
+    "attributes":    "attributes.json.zip",
+    "relationships": "relationships.json.zip",
+    "regions":       "region_descriptions.json.zip",
+    "image_data":    "image_data.json.zip",
+}
+
+def _download_and_load(name: str) -> list:
+    os.makedirs(VG_CACHE_DIR, exist_ok=True)
+    json_name = _VG_FILES[name].replace(".zip", "")
+    json_path = os.path.join(VG_CACHE_DIR, json_name)
+
+    # If plain JSON already present, use it directly
+    if not os.path.exists(json_path):
+        zip_path = os.path.join(VG_CACHE_DIR, _VG_FILES[name])
+        if not os.path.exists(zip_path):
+            url = f"{VG_BASE_URL}/{_VG_FILES[name]}"
+            print(f"Downloading {url} ...")
+            urllib.request.urlretrieve(url, zip_path)
+        print(f"Extracting {zip_path} ...")
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(VG_CACHE_DIR)
+        # Clean up zip after extraction to save space
+        os.remove(zip_path)
+
+    print(f"Loading {json_name} ...")
+    with open(json_path) as f:
+        return json.load(f)
+
+print("Loading Visual Genome data ...")
+_objects_raw       = _download_and_load("objects")        # list of {image_id, image_url, objects:[...]}
+_attributes_raw    = _download_and_load("attributes")
+_relationships_raw = _download_and_load("relationships")
+_regions_raw       = _download_and_load("regions")
+_image_data_raw    = _download_and_load("image_data")     # list of {image_id, width, height, url}
+
+# Index by image_id for O(1) lookup, preserving original list order
+_attr_by_id  = {r["image_id"]: r for r in _attributes_raw}
+_rel_by_id   = {r["image_id"]: r for r in _relationships_raw}
+_reg_by_id   = {r.get("image_id", r.get("id")): r for r in _regions_raw}
+_size_by_id  = {r["image_id"]: (r["width"], r["height"]) for r in _image_data_raw}
+
+# Build a unified list aligned with _objects_raw order
+class _ListView:
+    """Thin wrapper so existing code can use objects[idx], len(objects) etc."""
+    def __init__(self, data): self._data = data
+    def __len__(self):        return len(self._data)
+    def __getitem__(self, i): return self._data[i]
+
+_url_by_id = {r["image_id"]: r.get("url", "") for r in _image_data_raw}
+
+def _build_objects_compat():
+    rows = []
+    for rec in _objects_raw:
+        iid = rec["image_id"]
+        w, h = _size_by_id.get(iid, (1, 1))
+        rows.append({
+            "image_id":  iid,
+            # Prefer image_data.json's url — objects.json's image_url is buggy
+            # (always points to VG_100K_2/, but ~half of VG images live in VG_100K/).
+            "image_url": _url_by_id.get(iid, "") or rec.get("image_url", ""),
+            "width":     w,
+            "height":    h,
+            "objects":   rec["objects"],
+        })
+    return rows
+
+def _build_attributes_compat():
+    rows = []
+    for rec in _objects_raw:
+        iid  = rec["image_id"]
+        rows.append({"image_id": iid,
+                     "attributes": _attr_by_id.get(iid, {}).get("attributes", [])})
+    return rows
+
+def _build_relationships_compat():
+    rows = []
+    for rec in _objects_raw:
+        iid = rec["image_id"]
+        rows.append({"image_id": iid,
+                     "relationships": _rel_by_id.get(iid, {}).get("relationships", [])})
+    return rows
+
+def _build_regions_compat():
+    rows = []
+    for rec in _objects_raw:
+        iid = rec["image_id"]
+        rows.append({"image_id": iid,
+                     "regions": _reg_by_id.get(iid, {}).get("regions", [])})
+    return rows
+
+objects       = _ListView(_build_objects_compat())
+attributes    = _ListView(_build_attributes_compat())
+relationships = _ListView(_build_relationships_compat())
+regions       = _ListView(_build_regions_compat())
 
 assert len(objects) == len(attributes) == len(relationships) == len(regions)
 
 def load_sample_vg(idx):
-    sample = objects[idx] 
-    attrs = attributes[idx]["attributes"]
-    rels = relationships[idx]["relationships"]
+    import copy
+    raw_sample = objects[idx]
+    obj_list = raw_sample["objects"]
+    attrs_list = attributes[idx]["attributes"]
+    rels_raw = relationships[idx]["relationships"]
     regs = regions[idx]["regions"]
-    assert len(sample["objects"]) == len(attrs)
+
+    # Raw VG: attributes.json is not 1:1 with objects.json. Use objects.json as
+    # the authoritative object set; merge attributes by object_id when present.
+    attrs_by_id = {a["object_id"]: a for a in attrs_list if "object_id" in a}
     cur_objects = {}
-    for i, obj in enumerate(attrs):
-        object_id = obj["object_id"]
-        obj["object_id"] = i
-        cur_objects[object_id] = obj
-    
+    for i, obj in enumerate(obj_list):
+        original_id = obj["object_id"]
+        merged = dict(obj)
+        attr_entry = attrs_by_id.get(original_id)
+        merged["attributes"] = attr_entry.get("attributes", []) if attr_entry else []
+        merged["object_id"] = i
+        cur_objects[original_id] = merged
+
     new_rels = []
-    for rel in rels:
-        del rel["relationship_id"]
-        sub = rel["subject"]
-        obj = rel["object"]
-        
-        new_sub_id = cur_objects[sub["object_id"]]
-        new_obj_id = cur_objects[obj["object_id"]]
-        rel["subject"] = new_sub_id
-        rel["object"] = new_obj_id
-        new_rels.append(rel)        
+    for rel_orig in rels_raw:
+        sub = rel_orig.get("subject", {})
+        obj = rel_orig.get("object", {})
+        if sub.get("object_id") not in cur_objects or obj.get("object_id") not in cur_objects:
+            continue
+        rel = dict(rel_orig)
+        rel.pop("relationship_id", None)
+        rel["subject"] = cur_objects[sub["object_id"]]
+        rel["object"] = cur_objects[obj["object_id"]]
+        new_rels.append(rel)
 
     scene_graph = {
         "objects": cur_objects,
         "relationships": new_rels,
         "regions": regs,
     }
-    del sample["objects"]
+    # Build a fresh sample dict (do NOT mutate the cached raw_sample).
+    sample = {k: v for k, v in raw_sample.items() if k != "objects"}
     sample["sg"] = scene_graph
-    sample["metadata"] =  {
-            "objects": objects[idx]["objects"],
-            "relationships": relationships[idx]["relationships"],
-            "regions": regions[idx]["regions"],
-            "attributes": attributes[idx]["attributes"],
-        }
+    sample["metadata"] = {
+        "objects":       copy.deepcopy(obj_list),
+        "relationships": copy.deepcopy(rels_raw),
+        "regions":       copy.deepcopy(regs),
+        "attributes":    copy.deepcopy(attrs_list),
+    }
+    sample["image"] = _get_vg_image(sample["image_id"], sample.get("image_url", ""))
     return sample
+
+
+_VG_IMAGE_CACHE_DIR = os.path.join(VG_CACHE_DIR, "images")
+
+
+def _get_vg_image(image_id, url):
+    """Return a PIL Image for the VG image, downloading + caching on first access.
+    Falls back to the alternate VG_100K/VG_100K_2 path if the listed URL 404s.
+    """
+    from PIL import Image
+    os.makedirs(_VG_IMAGE_CACHE_DIR, exist_ok=True)
+    path = os.path.join(_VG_IMAGE_CACHE_DIR, f"{image_id}.jpg")
+    if not os.path.exists(path):
+        candidates = [url] if url else []
+        if url:
+            if "/VG_100K_2/" in url:
+                candidates.append(url.replace("/VG_100K_2/", "/VG_100K/"))
+            elif "/VG_100K/" in url:
+                candidates.append(url.replace("/VG_100K/", "/VG_100K_2/"))
+        last_err = None
+        for u in candidates:
+            try:
+                urllib.request.urlretrieve(u, path)
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+        if last_err is not None:
+            raise RuntimeError(f"VG image_id={image_id} download failed: {last_err}")
+    return Image.open(path).convert("RGB")
 
 
 def load_vg(num_samples=None):

@@ -80,7 +80,16 @@ if __name__ == '__main__':
             # if img_id in caption_dict.keys():
             #     captions = caption_dict[img_id]["captions"]
             # else:
-            captions = [region["phrase"] for region in sample["sg"]["regions"]]
+            # Reference regions: vg-conv style stores them under sample["sg"]["regions"];
+            # caption-style stores them at the top level (sample["regions"]).
+            sg = sample.get("sg") or {}
+            regions = (
+                sg.get("regions")
+                or sample.get("regions")
+                or sample.get("metadata", {}).get("regions", [])
+                or []
+            )
+            captions = [region["phrase"] for region in regions if "phrase" in region]
 
             prompt_format = "reference captions:\n{ref}.\nour caption:\n{response}\nIs our caption accurate?\n"
             caption_str = '. '.join(captions)

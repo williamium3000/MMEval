@@ -68,18 +68,60 @@ if __name__ == '__main__':
         
         print(f"Processing samples {args.start_idx} to {min(end_idx, len(conv_data))-1}")
         
+        # Helper: pick the best local image path (svg files use COCO paths;
+        # vg-style files use VG image IDs). Falls back to URL fetch only if no
+        # local path is found.
+        def _resolve_local_image(sample):
+            iid = sample.get("image_id")
+            if iid is None:
+                return None
+            iid_s = str(iid)
+            for cand in (
+                # svg files: image_id like "train2017/000000554750.jpg"
+                os.path.join("data/coco", iid_s),
+                # vg-style files: image_id is an integer; cached under vg_image_cache
+                f"work_dirs/vg_image_cache/{iid_s}.jpg",
+                f"data/vg/VG_100K/{iid_s}.jpg",
+                f"data/vg/VG_100K_2/{iid_s}.jpg",
+            ):
+                if os.path.exists(cand):
+                    return cand
+            return None
+
+        def _safe_open_image_bytes(b):
+            from PIL import Image as _Image
+            try:
+                _Image.open(BytesIO(b)).verify()
+                return BytesIO(b)
+            except Exception:
+                return None
+
         for sample in tqdm(selected_data):
             for conv in sample["conversations"]:
                 response = conv["response"].strip().replace('\n', '')
-                image_url = sample["url"]
 
-                try:
-                    request_response = requests.get(image_url)
-                    images.append(BytesIO(request_response.content))
-                    answers.append(response)
-                except requests.exceptions.RequestException as e:
-                    print(f"Error retrieving image: {e}")
+                local_path = _resolve_local_image(sample)
+                img_bio = None
+                if local_path:
+                    try:
+                        img_bio = BytesIO(open(local_path, "rb").read())
+                    except Exception as e:
+                        print(f"Warning: could not read local image {local_path}: {e}")
+                        img_bio = None
+                if img_bio is None:
+                    image_url = sample.get("url", "")
+                    if image_url:
+                        try:
+                            r = requests.get(image_url, timeout=15)
+                            if r.status_code == 200:
+                                img_bio = _safe_open_image_bytes(r.content)
+                        except requests.exceptions.RequestException as e:
+                            print(f"Error retrieving image {image_url}: {e}")
+                if img_bio is None:
+                    print(f"Warning: no usable image for image_id={sample.get('image_id')!r}, skipping")
                     continue
+                images.append(img_bio)
+                answers.append(response)
 
         score, sentence_score = scorer.faithscore(answers, images, save_judgments_path=args.save_judgments)
 

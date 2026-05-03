@@ -2,11 +2,23 @@ import time
 from tqdm import tqdm
 import os
 import re
-from modelscope.utils.constant import Tasks
-from modelscope.pipelines import pipeline
-from modelscope.preprocessors.multi_modal import OfaPreprocessor
+# modelscope only needed for the OFA visual-entailment backend; make it lazy so
+# vem_type=llava doesn't require modelscope.
+try:
+    from modelscope.utils.constant import Tasks
+    from modelscope.pipelines import pipeline
+    from modelscope.preprocessors.multi_modal import OfaPreprocessor
+except Exception:
+    Tasks = None
+    pipeline = None
+    OfaPreprocessor = None
 from llava15 import LLaVA
-from llama_pre import load_llama, stage1_llama, stage2_llama
+# llama_pre also pulls torch/peft for an optional local-LLaMA path; only needed
+# when --use_llama is set, so import it lazily too.
+try:
+    from llama_pre import load_llama, stage1_llama, stage2_llama
+except Exception:
+    load_llama = stage1_llama = stage2_llama = None
 from faith_utils import llava15, ofa
 import nltk
 from openai import OpenAI
@@ -123,7 +135,64 @@ class FaithScore():
                     response.append(r)
 
         results = response
-        for i, facts in enumerate(results):
+
+        def _normalize_facts(text):
+            """Collapse multi-line / bulleted LLM responses (e.g. Qwen's markdown
+            output) into the single-line `<Header>: a. b. c.` form expected by
+            the parser below.
+
+            Recognized headers: Entities, Relations, Colors, Counting,
+            Other attributes. Bullet prefixes (`- `, `* `, `1.`) and surrounding
+            markdown (**, ##, etc.) are stripped. Lines after a header that
+            don't introduce a new header are appended as items to that header.
+            """
+            HEADERS = ("Entities:", "Relations:", "Colors:", "Counting:", "Other attributes:")
+            cur = None
+            buckets = {h: [] for h in HEADERS}
+            import re as _re
+            for raw in text.split("\n"):
+                line = raw.strip()
+                if not line:
+                    continue
+                # strip leading markdown emphasis / heading markers
+                line_clean = _re.sub(r"^[*#>\s]+", "", line).strip()
+                line_clean = line_clean.rstrip("*").strip()
+                # detect header line — header may be followed by content on same line
+                matched = None
+                for h in HEADERS:
+                    if line_clean.lower().startswith(h.lower()):
+                        matched = h
+                        rest = line_clean[len(h):].strip()
+                        break
+                if matched:
+                    cur = matched
+                    if rest:
+                        # split same-line content on '. ' (the standard form)
+                        for piece in rest.split("."):
+                            piece = piece.strip().strip("*").strip("-").strip()
+                            if piece and piece.lower() not in ("none", "n/a"):
+                                buckets[cur].append(piece)
+                    continue
+                if cur is None:
+                    continue
+                # follow-on bullet/list items belonging to current header
+                item = _re.sub(r"^[-*•]\s*|^\d+\.\s*", "", line_clean).strip()
+                item = item.strip("*").strip()
+                if not item:
+                    continue
+                _il = item.lower()
+                if _il in ("none", "n/a", "—", "-") or _il.startswith("none ") or _il.startswith("none(") or "no quantification" in _il or "not mentioned" in _il or "not explicitly" in _il:
+                    continue
+                # split inline period-separated facts
+                for piece in item.split("."):
+                    piece = piece.strip().strip("*").strip("-").strip()
+                    if piece:
+                        buckets[cur].append(piece)
+            # rebuild the canonical single-line form
+            return "\n".join(f"{h} {'. '.join(buckets[h])}" for h in HEADERS)
+
+        for i, raw_facts in enumerate(results):
+            facts = _normalize_facts(raw_facts) if raw_facts != nons else raw_facts
             lines = facts.split("\n")
             entity_seen = False
             for line in lines:
@@ -133,35 +202,34 @@ class FaithScore():
                     if entity_seen:
                         break
                     entity_seen = True
-                    entity = [ent.strip() for ent in line.strip().replace("Entities: ", "").split(".") if len(ent)]
+                    entity = [ent.strip() for ent in line.strip().replace("Entities: ", "").split(".") if len(ent.strip())]
                     if line.strip() == "Entities:":
                         entity = []
                     Entities.append(entity)
                 elif line[:10] == "Relations:":
-                    # print(line.strip().replace("Relations: ","").replace("],","]],").split("], "))
-                    relation = line.strip().replace("Relations: ", "").split(". ")
+                    relation = [r.strip() for r in line.strip().replace("Relations: ", "").split(". ") if len(r.strip())]
                     if line.strip() == "Relations:":
                         relation = []
                     Relations.append(relation)
                 elif line[:7] == "Colors:":
-                    color = line.strip().replace("Colors: ", "").split(". ")
+                    color = [c.strip() for c in line.strip().replace("Colors: ", "").split(". ") if len(c.strip())]
                     if line.strip() == "Colors:":
                         color = []
                     Colors.append(color)
                 elif line[:9] == "Counting:":
-                    count = line.strip().replace("Counting: ", "").split(". ")
+                    count = [c.strip() for c in line.strip().replace("Counting: ", "").split(". ") if len(c.strip())]
                     if line.strip() == "Counting:":
                         count = []
                     Counting.append(count)
                 elif line[:17] == "Other attributes:":
-                    other = line.strip().replace("Other attributes: ", "").split(". ")
+                    other = [o.strip() for o in line.strip().replace("Other attributes: ", "").split(". ") if len(o.strip())]
                     if line.strip() == "Other attributes:":
                         other = []
                     Others.append(other)
 
             for l in [Entities, Relations, Colors, Counting, Others]:
                 if len(l) < i+1:
-                    for i in range(i-len(l)+1):       
+                    for _ in range(i+1-len(l)):
                         l.append([])
              
         # unflattened_Entities = []

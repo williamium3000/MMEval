@@ -4,11 +4,14 @@ import torch
 
 
 def _is_api_model(model_path: str) -> bool:
-    return model_path.startswith(("openai/", "gemini/", "zhipu/", "minimax/"))
+    return model_path.startswith(("openai/", "gemini/", "zhipu/", "minimax/", "parity/", "uniapi/"))
 
 
 def _load_api_model(args):
-    from .api_vlm import OpenAIVisionProvider, GeminiVisionProvider, ZhipuVisionProvider, MiniMaxVisionProvider
+    from .api_vlm import (
+        OpenAIVisionProvider, GeminiVisionProvider, ZhipuVisionProvider,
+        MiniMaxVisionProvider, ParityVisionProvider,
+    )
 
     if args.model_path.startswith("openai/"):
         model = args.model_path.split("/", 1)[1]
@@ -22,6 +25,22 @@ def _load_api_model(args):
     if args.model_path.startswith("minimax/"):
         model = args.model_path.split("/", 1)[1]
         return MiniMaxVisionProvider(model=model)
+    if args.model_path.startswith("parity/"):
+        # Hard refusal: Harbor/parity is retired and must not be touched.
+        # Switch the launcher to uniapi/<model> instead. If you really need
+        # parity, the user must explicitly approve and re-enable .env keys.
+        raise RuntimeError(
+            "Harbor/parity API is retired (per user policy). Refusing to "
+            "load model_path='" + args.model_path + "'. "
+            "Use 'uniapi/<model>' instead. To re-enable Harbor, the user "
+            "must restore PARITY_API_KEY/PARITY_API_BASE in .env and revert "
+            "this guard with explicit approval."
+        )
+    if args.model_path.startswith("uniapi/"):
+        model = args.model_path.split("/", 1)[1]
+        return ParityVisionProvider(model=model,
+                                    api_key_env="UNIAPI_API_KEY",
+                                    api_base_env="UNIAPI_API_BASE")
     raise NotImplementedError(f"Unknown API model prefix in model_path={args.model_path!r}")
 
 

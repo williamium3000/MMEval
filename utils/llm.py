@@ -65,10 +65,47 @@ def parse_dict(text):
     json_text = "{" + (match.group(1) if match else text) + "}"
     return json.loads(json_text)
 def parse_json(text):
-    pattern = r"```json(.*)```"
+    """Extract a JSON value from an LLM response.
+
+    Handles three common shapes that some providers (e.g. parity gemini /
+    gpt-4o variants) emit:
+      1. Plain JSON only.
+      2. JSON wrapped in ```json ... ``` fences (possibly followed by
+         explanatory prose — non-greedy match to capture the FIRST block).
+      3. JSON followed by trailing prose / additional concatenated objects
+         that confuse `json.loads` with `Extra data` errors. Falls back to
+         `JSONDecoder.raw_decode` which only consumes the first JSON value.
+    """
+    pattern = r"```json(.*?)```"
     match = re.search(pattern, text, re.DOTALL)
-    json_text = match.group(1) if match else text
-    return json.loads(json_text)
+    json_text = (match.group(1) if match else text).strip()
+    try:
+        return json.loads(json_text)
+    except json.JSONDecodeError:
+        # 'Extra data' / trailing prose — take just the first JSON value.
+        try:
+            obj, _end = json.JSONDecoder().raw_decode(json_text)
+            return obj
+        except json.JSONDecodeError:
+            pass
+        # Last resort: search for the first balanced { ... } or [ ... ].
+        for opener, closer in (("{", "}"), ("[", "]")):
+            i = json_text.find(opener)
+            if i < 0:
+                continue
+            depth = 0
+            for j in range(i, len(json_text)):
+                c = json_text[j]
+                if c == opener:
+                    depth += 1
+                elif c == closer:
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            return json.loads(json_text[i:j + 1])
+                        except json.JSONDecodeError:
+                            break
+        raise
 
 def parse_code(rsp):
     pattern = r"```python(.*)```"
@@ -145,7 +182,27 @@ class LLMChat:
         return None
             
 
+    def _is_reasoning_model(self):
+        # gpt-5*, o1*, o3*, o4* spend output budget on hidden reasoning tokens
+        # by default. Setting reasoning_effort="minimal" (or "low") skips the
+        # reasoning phase, eliminating empty-content responses on tight token
+        # budgets and roughly halving per-call latency.
+        m = (self.model or "").lower()
+        return m.startswith("gpt-5") or m.startswith("o1") or m.startswith("o3") or m.startswith("o4")
+
+    def _inject_reasoning_minimal(self, kwargs):
+        if not self._is_reasoning_model():
+            return kwargs
+        kwargs = dict(kwargs)
+        # Pass via extra_body so it tunnels through OpenAI-compatible proxies
+        # that don't whitelist reasoning_effort as a top-level kwarg.
+        eb = dict(kwargs.get("extra_body") or {})
+        eb.setdefault("reasoning_effort", "minimal")
+        kwargs["extra_body"] = eb
+        return kwargs
+
     def _get_response(self, messages, **kwargs):
+        kwargs = self._inject_reasoning_minimal(kwargs)
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -157,6 +214,7 @@ class LLMChat:
         return content
 
     def _get_structured_response(self, messages, response_format, **kwargs):
+        kwargs = self._inject_reasoning_minimal(kwargs)
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=messages,

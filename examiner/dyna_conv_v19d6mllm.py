@@ -1,13 +1,20 @@
-# 1) change to 5 contexts
-# 2) - IMPORTANT: Diversity is defined as the context/goal being able to provoke exploration of DIFFERENT objects/ attributes of objects/ relations between objects within the image.
-     
+# v19.6mllm = v19 + multimodal examiner.
+# The examiner LLM (gpt-4o etc.) sees the actual IMAGE attached at the start of
+# the conversation, in addition to the compact scene-graph text. The image is
+# attached only once (in the first user turn after the system prompt); later
+# turns inherit it via the conversation history.
+#
+# v19 changes vs v18resume5 (still apply):
+# 1) Compact VG format (format_case_vg_compact) — ~58% fewer tokens per scene graph
+# 2) 2 contexts per sample instead of 5
 
 from utils.utils import load_data
-from utils.vg import format_case_vg
+from utils.vg import format_case_vg_compact as format_case_vg
 from utils.coco import format_case_coco
 from utils.llm import LLMChat, parse_json
 from examiner import prompt as PROMPT
 from infer.loader import load_model
+from infer.api_vlm import _image_to_data_url
 import os
 import argparse
 import json
@@ -17,15 +24,47 @@ from utils.sg import SceneGraphData
 import random
 import traceback
 import re
-import torch._dynamo 
+import urllib.request
+from PIL import Image
+import torch._dynamo
 torch._dynamo.config.cache_size_limit = 1024 * 1024 * 1024 * 1024 * 2  # 2TB
+
+# ── VG image fetcher (vg.py loader doesn't attach images; pull from URL) ──────
+VG_IMAGE_CACHE_DIR = os.path.join("work_dirs", "vg_image_cache")
+_VG_URL_MAP = None
+
+
+def _vg_url_map():
+    global _VG_URL_MAP
+    if _VG_URL_MAP is None:
+        from utils.vg import _image_data_raw
+        _VG_URL_MAP = {r["image_id"]: r["url"] for r in _image_data_raw}
+    return _VG_URL_MAP
+
+
+def get_pil_image_for_case(case):
+    """Return a PIL.Image for the sample. SVG already has 'image' attached;
+    VG samples don't, so download and cache locally."""
+    img = case.get("image")
+    if img is not None:
+        return img
+    image_id = case["image_id"]
+    os.makedirs(VG_IMAGE_CACHE_DIR, exist_ok=True)
+    cache_path = os.path.join(VG_IMAGE_CACHE_DIR, f"{image_id}.jpg")
+    if not (os.path.exists(cache_path) and os.path.getsize(cache_path) > 0):
+        url_map = _vg_url_map()
+        url = url_map.get(image_id)
+        if not url:
+            raise ValueError(f"No VG URL for image_id={image_id}")
+        urllib.request.urlretrieve(url, cache_path)
+    return Image.open(cache_path).convert("RGB")
 
 
 CONTEXT_PROMPT = \
 """
 Your task is to create a realistic scenario in which the given image is situated in the first-person view, i.e. you should imagine the image depicts your view of the environment. This context should incorporate a background setting, the characters and objects involved, and a specific goal or objective that is relevant to the image. The context must be plausible, align with real-world experiences, and directly connect with the depicted elements in the image.
 
-The image will be described through a list of objects, their attributes, and their spatial relationships, with each object represented by a set of coordinates in the image. These coordinates (x1, y1, x2, y2) will range from 0 to 1, corresponding to the top-left and bottom-right corners of each object.
+The image will be described through a list of objects, their attributes, and their spatial relationships, with each object represented by a bounding box [x1,y1,x2,y2] with values from 0 to 1, corresponding to the top-left and bottom-right corners of each object.
 
 Image information:
 {}
@@ -41,7 +80,7 @@ CORE CONSTRAINTS
     - Each context MUST involve multiple instances, attributes, or relations from the image.
     - Given sufficient diversity, you should generate contexts that naturally involve as many instances, attributes, or relations from the image as possible.
 4) Diversity without redundancy:
-   - The five contexts must be meaningfully different (different emphasis on objects/relations), not just rephrases of the same scenario.
+   - The two contexts must be meaningfully different (different emphasis on objects/relations), not just rephrases of the same scenario.
    - IMPORTANT: Diversity is defined as the context/goal being able to provoke exploration of DIFFERENT objects/ attributes of objects/ relations between objects within the image.
      
 Instructions:
@@ -66,22 +105,12 @@ Some GOOD Examples:
         "background": "A bright and inviting kitchen featuring wooden cabinetry, a cozy dining area, and fresh fruit adding a vibrant touch. The image depicts the first-person view of the character",
         "goal": "The character is hungry and tries to eat something.",
         "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
-    }},
-    {{
-        "background": "A modest bathroom showing signs of wear, featuring basic fixtures, white tiles, and a shower area needing repairs.",
-        "goal": "The character just woke up and wanted to wash his face.",
-        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
-    }},
-    {{
-        "background": "A modern kitchen with stainless steel appliances, wooden cabinets, and a countertop filled with various cooking utensils.",
-        "goal": "The character is blind and stumbled into the kitchen. He is trying to find his way out of the kitchen.",
-        "relevant_objects": ["object_id_1", "object_id_2", "object_id_3",...]
     }}
 ]
 
 
 
-Please generate five contexts based on the image information. Please make sure the contexts include only limited specific descriptions of object features in the image and stay as high-level glimpses without revealing too many observational details. Make sure the contexts are diverse and not redundant.
+Please generate two contexts based on the image information. Please make sure the contexts include only limited specific descriptions of object features in the image and stay as high-level glimpses without revealing too many observational details. Make sure the contexts are diverse and not redundant.
 
 For each context, also select ALL the relevant object nodes from the image that are related to the background or goal. These objects will be used to generate evaluation questions. Select objects in order of relevancy, with the most relevant first.
 Be comprehensive in your selection to ensure all pertinent objects are included. And include any objects that are closely related in terms of same type or same bbox location.
@@ -89,7 +118,7 @@ Be comprehensive in your selection to ensure all pertinent objects are included.
 ========================
 WHAT TO PRODUCE
 ========================
-Return EXACTLY a JSON list with FIVE dictionaries. Each dictionary must contain:
+Return EXACTLY a JSON list with TWO dictionaries. Each dictionary must contain:
 - "background": <50 words, first-person situation, plausible real-world setting>
 - "goal": a concrete objective that can be progressed by asking image-grounded questions
 - "relevant_objects": a list of object_ids (from the image information) that are most relevant to this context, ordered by relevancy
@@ -97,9 +126,6 @@ Return EXACTLY a JSON list with FIVE dictionaries. Each dictionary must contain:
 Output format (STRICT):
 ```json
 [
-  {{"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]}},
-  {{"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]}},
-  {{"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]}},
   {{"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]}},
   {{"background": "...", "goal": "...", "relevant_objects": ["object_id_1", "object_id_2", "object_id_3", ...]}}
 ]
@@ -195,7 +221,7 @@ CONV_SYSTEM_PROMPT = \
 You will have multiple rounds of conversations with the model. In each round, you will be provided with:
 
 * **An image** (represented as a list of objects, their attributes, and relationships).
-* **Bounding-box coordinates** for each object, given as `(x1, y1, x2, y2)` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
+* **Bounding-box coordinates** for each object, given as `[x1,y1,x2,y2]` in normalized values between 0 and 1, corresponding to top-left and bottom-right corners of each object.
 
 Your role is to **carry out a natural, open-ended, human-like conversation** with the model, asking questions about the image in the given context.
 
@@ -467,6 +493,9 @@ class EvalSample:
         self.llm_chat_conv = llm_chat_conv  # GPT-4o for conversation
         self.eval_func = eval_func
         self.conversations = []
+        # v19.6mllm: cache PIL image + data URL for the multimodal examiner.
+        self._pil_image = get_pil_image_for_case(case)
+        self._image_data_url = _image_to_data_url(self._pil_image)
         # Track previously asked questions by type to avoid repetition
         self.repeat_ref_dict = {
             "regular": [],
@@ -492,14 +521,19 @@ class EvalSample:
         prev_questions_str = json.dumps(self.repeat_ref_dict["regular"], indent=2) if self.repeat_ref_dict["regular"] else "None"
         conversations.append({"role": "user", "content": REGULAR_CONV_PROMPT.format(sampled_node, context["background"], context["goal"], prev_questions_str)})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        # Defensive: if all parser retries failed, LLMChat returns None.
+        if not isinstance(message, dict):
+            message = {"question": "Describe what you see in this scene.", "gt": ""}
         # Track this question to prevent repetition
         self.repeat_ref_dict["regular"].append(message.get("question", ""))
         return message
-    
+
     def ask_follow_up(self, conversations, context):
         conversations = copy.deepcopy(conversations)
         conversations.append({"role": "user", "content": FOLLOW_UP_CONV_PROMPT})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        if not isinstance(message, dict):
+            message = {"question": "Can you elaborate?", "gt": ""}
         return message
     
     def ask_unanswerable(self, conversations, context):
@@ -517,6 +551,9 @@ class EvalSample:
         prev_questions_str = json.dumps(self.repeat_ref_dict["unanswerable"], indent=2) if self.repeat_ref_dict["unanswerable"] else "None"
         conversations.append({"role": "user", "content": UNANSWERABLE_CONV_PROMPT3.format(prev_questions_str)})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        if not isinstance(message, dict):
+            message = {"question": "What color is the missing object next to the visible item?",
+                       "gt": "I can't answer the question because the object doesn't exist."}
         # Default gt to standard message for unanswerable questions
         if "gt" not in message:
             message["gt"] = "I can't answer the question because the object doesn't exist."
@@ -531,6 +568,8 @@ class EvalSample:
         prev_questions_str = json.dumps(self.repeat_ref_dict["adversarial"], indent=2) if self.repeat_ref_dict["adversarial"] else "None"
         conversations.append({"role": "user", "content": ADVERSARIAL_CONV_PROMPT1.format(context["background"], context["goal"], prev_questions_str)})
         message = self.llm_chat_conv.chat(conversations, parse_json)
+        if not isinstance(message, dict):
+            message = {"question": "Is there a missing object that doesn't belong?", "gt": "No"}
         # Default gt to 'No' for adversarial questions
         if "gt" not in message:
             message["gt"] = "No"
@@ -548,13 +587,13 @@ class EvalSample:
                             This ensures the new contexts stay diverse from existing ones.
         
         Returns:
-            List of contexts (either 5 new contexts, or remaining contexts if previous_contexts provided)
+            List of contexts (either 2 new contexts, or remaining contexts if previous_contexts provided)
         """
         image_info = format_case_vg(case) if args.dataset in ("vg", "svg") else format_case_coco(case)
-
+        
         if previous_contexts is not None and len(previous_contexts) > 0:
             # Generate remaining contexts, using existing contexts for diversity
-            num_remaining = 5 - len(previous_contexts)
+            num_remaining = 2 - len(previous_contexts)
             prompt = CONTEXT_PROMPT.format(image_info).strip()
             prompt += f"\n\nIMPORTANT: The following {len(previous_contexts)} context(s) have already been generated:\n{json.dumps(previous_contexts, indent=2)}\n\nPlease generate ONLY {num_remaining} additional context(s) that are meaningfully different from the above. Return a JSON list with {num_remaining} dictionary/dictionaries."
             conversations = [
@@ -566,7 +605,7 @@ class EvalSample:
             if isinstance(contexts, dict):
                 contexts = [contexts]
         else:
-            # Generate all 5 contexts from scratch
+            # Generate all 2 contexts from scratch
             conversations = [
                 {"role": "system", "content": "You are an expert in generating realistic and diverse contexts for images. You excel at understanding the image content and predicting the possible scenarios and context in which the image might be situated."},
                 {"role": "user", "content": CONTEXT_PROMPT.format(image_info).strip()}
@@ -644,21 +683,21 @@ class EvalSample:
         
         Args:
             prev_contexts: List of previously generated contexts from cache.
-                          Can be None (generate all 5), or a list with n contexts (0 <= n < 5)
-                          to generate the remaining (5-n) contexts.
-        
+                          Can be None (generate all 2), or a list with n contexts (0 <= n < 2)
+                          to generate the remaining (2-n) contexts.
+
         Returns:
             List of conversation results to save
         """
         to_save = []
-        
+
         # Determine which contexts to generate
         if prev_contexts is None:
-            # Generate all 5 contexts from scratch
+            # Generate all 2 contexts from scratch
             previous_contexts = None
-        elif len(prev_contexts) >= 5:
-            # All 5 contexts already exist, nothing to do
-            print(f"All 5 contexts already cached, skipping this sample.")
+        elif len(prev_contexts) >= 2:
+            # All 2 contexts already exist, nothing to do
+            print(f"All 2 contexts already cached, skipping this sample.")
             return to_save
         else:
             # Generate remaining contexts
@@ -709,8 +748,19 @@ class EvalSample:
             #     ICLs.append({"role": "user", "content": firstp})
             #     ICLs.extend(icl["conversations"])
             
+            # v19.6mllm: seed the conversation with the actual image attached
+            # to the first user turn. Subsequent turns inherit it via history.
             conversations = [
-                {"role": "system", "content": CONV_SYSTEM_PROMPT.format(self.image_info, context["background"], context["goal"])}
+                {"role": "system", "content": CONV_SYSTEM_PROMPT.format(self.image_info, context["background"], context["goal"])},
+                {"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": self._image_data_url}},
+                    {"type": "text", "text": (
+                        "Above is the image you are examining. Use it (together with the "
+                        "scene-graph in the system prompt and the provided context) to ask "
+                        "grounded questions in the rounds that follow."
+                    )},
+                ]},
+                {"role": "assistant", "content": "Acknowledged. I have the image and will ground my questions in it."},
             ]
             to_save_i = []
             switch_history = []
@@ -751,7 +801,8 @@ class EvalSample:
                 question = message_evaluator["question"]
                 gt = message_evaluator["gt"]
                 conversations.append({"role": "assistant", "content": question})
-                image_file = self.case["image"]
+                # v19.6mllm: use cached PIL image (works for both VG and SVG)
+                image_file = self._pil_image
                 output = eval_func(image_file=image_file, query=question)
                 output = output.lower()
                 conversations.append({"role": "user", "content": output})
@@ -774,7 +825,7 @@ class EvalSample:
             sample_to_save["conversations"] = to_save_i
             sample_to_save["context"] = context
             sample_to_save["relevant_objects"] = context.get("relevant_objects", [])
-            del sample_to_save["image"]
+            sample_to_save.pop("image", None)
             to_save.append(sample_to_save)
         return to_save
             
@@ -870,23 +921,23 @@ if __name__ == "__main__":
     
     print("starting conversation with model...")
     total_samples = len(samples)
-    total_conversations = total_samples * 5  # 5 conversations per sample
+    total_conversations = total_samples * 2  # 2 conversations per sample
     completed_conversations = len(cached_data)
-    
+
     for i, sample in enumerate(tqdm.tqdm(samples, desc="Processing samples")):
         sample_id = get_sample_id(sample)
-        
+
         # Check how many contexts are already cached for this sample
         cached_contexts = get_cached_contexts_for_sample(sample_id, cached_data)
         num_cached = len(cached_contexts)
-        
-        if num_cached >= 5:
-            print(f"Skipping sample {i+1}/{total_samples} (all 5 conversations already processed): {sample_id}")
+
+        if num_cached >= 2:
+            print(f"Skipping sample {i+1}/{total_samples} (all 2 conversations already processed): {sample_id}")
             continue
         elif num_cached > 0:
-            print(f"Processing sample {i+1}/{total_samples}: {sample_id} ({num_cached}/5 conversations cached, generating remaining {5-num_cached})")
+            print(f"Processing sample {i+1}/{total_samples}: {sample_id} ({num_cached}/2 conversations cached, generating remaining {2-num_cached})")
         else:
-            print(f"Processing sample {i+1}/{total_samples}: {sample_id} (generating all 5 conversations)")
+            print(f"Processing sample {i+1}/{total_samples}: {sample_id} (generating all 2 conversations)")
         
         try:
             eval_sample = EvalSample(sample, llm_chat_context, llm_chat_conv, eval_func)
@@ -910,7 +961,7 @@ if __name__ == "__main__":
     with open(args.outfile, "w") as f:
         json.dump(to_save, f, indent=4)
     
-    print(f"Completed processing {completed_conversations}/{total_conversations} conversations ({completed_conversations//5}/{total_samples} samples)")
+    print(f"Completed processing {completed_conversations}/{total_conversations} conversations ({completed_conversations//2}/{total_samples} samples)")
     print(f"Results saved to {args.outfile}")
     if args.cache_file:
         print(f"Cache saved to {args.cache_file}")

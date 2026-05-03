@@ -243,7 +243,7 @@ for ((i=0;i<NUM_MODELS;i++)); do
     fi
     echo "[$(date +'%H:%M:%S')] Starting: $filename (port $port) mode=$([ "$use_verify_only" = "1" ] && echo verify_only || echo full)"
     (
-        cmd="python examiner/DSG_v3.py --input_file \"$pope_file\" --outfile \"$outfile\""
+        cmd="python examiner/DSG_v4.py --input_file \"$pope_file\" --outfile \"$outfile\""
         cmd="$cmd --vlm_api_url http://localhost:$port/v1 --vlm_api_model \"$mp\""
         cmd="$cmd --qwen_port $QWEN_PORT --batch_size $BATCH_SIZE --start_idx $START_IDX --verify"
         [ -n "$resume_flag" ] && cmd="$cmd $resume_flag"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DSG_v3.py: Extract answers from both Qwen-translated (from response) and fresh VLM answers.
+DSG_v4.py: Extract answers from both Qwen-translated (from response) and fresh VLM answers.
 
 Reads _pope_converted.json files that already have dsg_qa extracted.
 For each question:
@@ -9,7 +9,7 @@ For each question:
 3. Optionally verify both against ground truth (--verify) and compare accuracy
 
 Usage:
-    python examiner/DSG_v3.py \
+    python examiner/DSG_v4.py \
         --input_file work_dirs/vg/final_run_v18_gpt4o_completed/llava-1.5-7b-hf_pope_converted.json \
         --outfile work_dirs/vg/final_run_v18_gpt4o_completed/llava-1.5-7b-hf_with_both_answers.json \
         --vlm_model_path llava-hf/llava-1.5-7b-hf \
@@ -389,24 +389,69 @@ def prepare_image_for_api(image_path_or_url):
     return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
 
 
-def call_vlm_api(api_url: str, image_path: str, question: str, model_name: str) -> str:
-    """Call VLM via OpenAI-compatible API (e.g. vLLM) with image + question."""
-    image_content = prepare_image_for_api(image_path)
-    messages = [{"role": "user", "content": [image_content, {"type": "text", "text": question}]}]
-    payload = {"model": model_name, "messages": messages, "max_tokens": 512, "temperature": 0.0}
+def _resolve_api_model(model_path):
+    """Infer (api_url, api_key, bare_model) from a prefixed model path like
+    `openai/gpt-4o`, `uniapi/gpt-4o`, `gemini/gemini-2.5-flash`.
+    Returns (None, None, None) if model_path has no API prefix.
+    Reads env vars for url+key (so the caller doesn't need to pass them).
+
+    NOTE: `parity/` prefix is RETIRED (Harbor gateway dead). Hitting it
+    raises immediately rather than silently falling through.
+    """
+    if not model_path or "/" not in model_path:
+        return (None, None, None)
+    prefix, _, bare = model_path.partition("/")
+    prefix = prefix.lower()
+    if prefix == "parity":
+        raise RuntimeError(
+            "Harbor/parity API is retired (per user policy). Refusing to "
+            "resolve model_path='" + model_path + "'. Use 'uniapi/" + bare + "' instead."
+        )
+    cfg = {
+        "openai":  ("OPENAI_API_BASE",   "OPENAI_API_KEY",   "https://api.openai.com/v1"),
+        "uniapi":  ("UNIAPI_API_BASE",   "UNIAPI_API_KEY",   "https://api.uniapi.io/v1"),
+        # gemini is non-OpenAI-compatible if hitting Google directly, but on
+        # OpenAI-compatible gateways (uniapi) just use those env vars.
+        "gemini":  ("OPENAI_API_BASE",   "OPENAI_API_KEY",   None),
+        "zhipu":   ("ZHIPU_API_BASE",    "ZHIPU_API_KEY",    "https://open.bigmodel.cn/api/paas/v4"),
+    }
+    if prefix not in cfg:
+        return (None, None, None)
+    base_env, key_env, default_base = cfg[prefix]
+    api_url  = os.environ.get(base_env) or os.environ.get("OPENAI_API_BASE") or os.environ.get("OPENAI_BASE_URL") or default_base
+    api_key  = os.environ.get(key_env)  or os.environ.get("OPENAI_API_KEY")
+    if api_url is None or api_key is None:
+        return (None, None, None)
+    # gemini-on-gateway: bare model includes the variant name (e.g. gemini-2.5-flash).
+    return (api_url, api_key, bare)
+
+
+def _post_chat(api_url, api_key, payload):
+    """OpenAI-compatible POST to <base>/chat/completions, with optional Bearer auth."""
     base = api_url.rstrip("/").replace("/chat/completions", "")
     if not base.endswith("/v1"):
         base = base + "/v1"
     url = base + "/chat/completions"
-    r = requests.post(url, json=payload, timeout=120)
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    r = requests.post(url, headers=headers, json=payload, timeout=120)
     r.raise_for_status()
-    out = r.json()
+    return r.json()
+
+
+def call_vlm_api(api_url: str, image_path: str, question: str, model_name: str, api_key: str = None) -> str:
+    """Call VLM via OpenAI-compatible API (e.g. vLLM, OpenAI, parity, uniapi) with image + question."""
+    image_content = prepare_image_for_api(image_path)
+    messages = [{"role": "user", "content": [image_content, {"type": "text", "text": question}]}]
+    payload = {"model": model_name, "messages": messages, "max_tokens": 512, "temperature": 0.0}
+    out = _post_chat(api_url, api_key, payload)
     if out.get("choices") and len(out["choices"]) > 0:
         return (out["choices"][0].get("message", {}).get("content") or "").strip()
     return ""
 
 
-def call_vlm_api_multi(api_url: str, image_path_or_url: str, questions: list, model_name: str) -> str:
+def call_vlm_api_multi(api_url: str, image_path_or_url: str, questions: list, model_name: str, api_key: str = None) -> str:
     """One VLM call: image + list of questions, ask for one Yes/No per line. Returns raw text."""
     questions_blob = "\n".join(f"{i+1}. {q}" for i, q in enumerate(questions))
     n = len(questions)
@@ -419,13 +464,7 @@ Your {n} answers (one word per line):"""
     image_content = prepare_image_for_api(image_path_or_url)
     messages = [{"role": "user", "content": [image_content, {"type": "text", "text": prompt}]}]
     payload = {"model": model_name, "messages": messages, "max_tokens": 512, "temperature": 0.0}
-    base = api_url.rstrip("/").replace("/chat/completions", "")
-    if not base.endswith("/v1"):
-        base = base + "/v1"
-    url = base + "/chat/completions"
-    r = requests.post(url, json=payload, timeout=120)
-    r.raise_for_status()
-    out = r.json()
+    out = _post_chat(api_url, api_key, payload)
     if out.get("choices") and len(out["choices"]) > 0:
         return (out["choices"][0].get("message", {}).get("content") or "").strip()
     return ""
@@ -555,27 +594,63 @@ def main():
     if args.input_file is None:
         raise SystemExit("Provide --input_file or use --opera for default input.")
 
-    base_url = f"http://localhost:{args.qwen_port}/v1"
-    qwen_client = OpenAI(api_key="dummy-key", base_url=base_url, timeout=API_TIMEOUT_SEC)
+    # Qwen endpoint: prefer REMOTE_API_URL/KEY/MODEL env (external Qwen);
+    # fall back to localhost:{qwen_port} for the legacy local vLLM path.
+    qwen_remote_url = os.getenv("REMOTE_API_URL") or os.getenv("QWEN_API_BASE")
+    if qwen_remote_url:
+        base_url = qwen_remote_url.rstrip("/")
+        if not base_url.endswith("/v1"):
+            base_url = base_url + "/v1"
+        qwen_api_key = os.getenv("REMOTE_API_KEY") or os.getenv("QWEN_API_KEY") or "dummy-key"
+        qwen_model = os.getenv("REMOTE_API_MODEL") or os.getenv("QWEN_API_MODEL") or QWEN_MODEL
+    else:
+        base_url = f"http://localhost:{args.qwen_port}/v1"
+        qwen_api_key = "dummy-key"
+        qwen_model = QWEN_MODEL
+    print(f"Qwen verify endpoint: {base_url} model={qwen_model}")
+    qwen_client = OpenAI(api_key=qwen_api_key, base_url=base_url, timeout=API_TIMEOUT_SEC)
 
     def get_qwen(prompt):
         return qwen_client.chat.completions.create(
-            model=QWEN_MODEL,
+            model=qwen_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
         ).choices[0].message.content
 
+    # Path 1: explicit --vlm_api_url (typical: locally-hosted vLLM server).
+    # Path 2: --vlm_model_path with an API prefix (openai/, parity/, uniapi/, gemini/, zhipu/) →
+    #         auto-resolve api_url + api_key from env vars and treat as API.
+    # Path 3: --vlm_model_path with no prefix → load locally via infer/loader.
     use_vlm_api = bool(args.vlm_api_url) and not getattr(args, "opera", False)
     vlm_eval_fn = None
     vlm_api_model = None
+    vlm_api_key = None
     if use_vlm_api:
+        # Path 1: explicit URL (local vLLM, no auth)
         vlm_api_model = args.vlm_api_model or args.vlm_model_path
         if not vlm_api_model:
             raise SystemExit("When --vlm_api_url is set, provide --vlm_api_model or --vlm_model_path.")
+        vlm_api_key = None  # local vLLM doesn't require Authorization
         print(f"Using VLM via API: {args.vlm_api_url} model={vlm_api_model}")
+    elif args.vlm_model_path and not getattr(args, "opera", False):
+        resolved_url, resolved_key, bare_model = _resolve_api_model(args.vlm_model_path)
+        if resolved_url is not None:
+            # Path 2: API model auto-detected
+            args.vlm_api_url = resolved_url
+            vlm_api_model = bare_model
+            vlm_api_key = resolved_key
+            use_vlm_api = True
+            print(f"Auto-routing API VLM: prefix={args.vlm_model_path.split('/',1)[0]} url={resolved_url} model={bare_model}")
+        else:
+            # Path 3: local load
+            print(f"Loading VLM locally: {args.vlm_model_path}")
+            loader_args = type("Args", (), {"model_path": args.vlm_model_path, "model_base": args.vlm_model_base})()
+            from infer.loader import load_model
+            vlm_eval_fn = load_model(loader_args)
     else:
         if not args.vlm_model_path:
             raise SystemExit("Provide either --vlm_model_path (load locally) or --vlm_api_url (use API).")
+        # Opera path falls through to local load
         print(f"Loading VLM locally: {args.vlm_model_path}")
         loader_args = type("Args", (), {"model_path": args.vlm_model_path, "model_base": args.vlm_model_base})()
         from infer.loader import load_model
@@ -674,7 +749,7 @@ def main():
         """One VLM call; item is (img_path, question, qa). Returns (qa, raw)."""
         img_path, question, qa = item
         if use_vlm_api:
-            raw = call_vlm_api(args.vlm_api_url, img_path, question, vlm_api_model)
+            raw = call_vlm_api(args.vlm_api_url, img_path, question, vlm_api_model, api_key=vlm_api_key)
             return qa, raw
         img = Image.open(img_path).convert("RGB")
         raw = vlm_eval_fn(img, question)
@@ -733,7 +808,7 @@ def main():
                     # (2) VLM: one call per turn — image + list of questions, parse list of Yes/No
                     try:
                         if use_vlm_api:
-                            single_raw = call_vlm_api_multi(args.vlm_api_url, image_path, questions, vlm_api_model)
+                            single_raw = call_vlm_api_multi(args.vlm_api_url, image_path, questions, vlm_api_model, api_key=vlm_api_key)
                             single_list = parse_yesno_list(single_raw, len(questions))
                             for i, qa in enumerate(qa_list):
                                 qa["single_response"] = single_list[i] if i < len(single_list) else "Unknown"

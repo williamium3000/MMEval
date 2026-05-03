@@ -1,6 +1,11 @@
 import torch
 from PIL import Image
-from modelscope.outputs import OutputKeys
+# modelscope is only needed by the OFA backend (ofa / ofa-ve). Make it optional
+# so that vem_type=llava works without modelscope installed.
+try:
+    from modelscope.outputs import OutputKeys
+except Exception:
+    OutputKeys = None
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

@@ -22,14 +22,14 @@ Please respond as if you are having the conversation with the vision-language mo
 
 def dyna_conv(args, case, llm_chat, eval_func):
     sys_prompt = PROMPT.__dict__[args.p_mode]
-    image_info = format_case_vg(case) if args.dataset == "vg" else format_case_coco(case)
+    image_info = format_case_vg(case) if args.dataset in ("vg", "svg") else format_case_coco(case)
     loaded_icls = []
     if args.icls is not None:
         loaded_icls = json.load(open(args.icls))
     
     ICLs = []
     for icl in loaded_icls:
-        image_info = format_case_vg(icl["image_info"]) if args.dataset == "vg" else format_case_coco(icl["image_info"])
+        image_info = format_case_vg(icl["image_info"]) if args.dataset in ("vg", "svg") else format_case_coco(icl["image_info"])
         firstp = CONV_PROMPT.format(image_info)
         ICLs.append({"role": "user", "content": firstp})
         ICLs.extend(icl["conversations"])

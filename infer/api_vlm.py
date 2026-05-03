@@ -255,6 +255,78 @@ class ZhipuVisionProvider:
 
 
 @dataclass
+class ParityVisionProvider:
+    """
+    OpenAI-compatible /chat/completions vision provider.
+
+    Use this for gateways that proxy multiple providers behind a single
+    OpenAI-compatible chat endpoint (originally parity_api / Harbor; now
+    uniapi). Handles `gpt-*` and `gemini-*` model ids alike — both via
+    `/chat/completions` with `image_url` data URL content.
+
+    Class name kept for backward compat; default env vars now point at
+    uniapi since Harbor is retired.
+
+    model_path format: uniapi/<model>  (or openai/, gemini/, ...)
+
+    Auth:
+      - export UNIAPI_API_KEY=...   (falls back to OPENAI_API_KEY)
+      - export UNIAPI_API_BASE=...  (falls back to OPENAI_API_BASE)
+    """
+
+    model: str
+    api_key_env: str = "UNIAPI_API_KEY"
+    api_base_env: str = "UNIAPI_API_BASE"
+
+    def __call__(self, image_file: Any, query: str) -> str:
+        api_key = os.getenv(self.api_key_env) or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                f"Missing {self.api_key_env} (and OPENAI_API_KEY fallback). "
+                "Set one of them in your environment."
+            )
+        api_base = (os.getenv(self.api_base_env) or os.getenv("OPENAI_API_BASE")
+                    or "https://api.openai.com/v1").rstrip("/")
+
+        payload = {
+            "model": self.model,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": query},
+                    {"type": "image_url",
+                     "image_url": {"url": _image_to_data_url(image_file)}},
+                ],
+            }],
+        }
+        r = requests.post(
+            f"{api_base}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=300,
+        )
+        r.raise_for_status()
+        data = r.json()
+        try:
+            choices = data.get("choices", [])
+            if choices:
+                msg = choices[0].get("message", {})
+                content = msg.get("content")
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list):
+                    parts = [
+                        p.get("text") for p in content
+                        if isinstance(p, dict) and p.get("type") in ("text", "output_text")
+                    ]
+                    if any(parts):
+                        return "\n".join(p for p in parts if p)
+        except Exception:
+            pass
+        return str(data)
+
+
+@dataclass
 class MiniMaxVisionProvider:
     """
     model_path format: minimax/<model>

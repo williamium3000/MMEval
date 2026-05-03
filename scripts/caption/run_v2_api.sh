@@ -84,7 +84,7 @@ run_job() {
 
     echo "Running ${name}: ${model_path}"
     # shellcheck disable=SC2086
-    python examiner/caption.py \
+    /raid/icy/iris/.conda/envs/coneval-haelm/bin/python examiner/caption.py \
       --dataset "${DATASET}" \
       --num_samples "${NUM_SAMPLES}" \
       --model_path "${model_path}" \
@@ -95,14 +95,14 @@ run_job() {
 }
 
 # One newer model per provider (as of 2026 docs)
-run_job "openai_gpt-5.4-mini" "openai/gpt-5.4-mini" "OPENAI_API_KEY"
-run_job "openai_gpt-4o" "openai/gpt-4o" "OPENAI_API_KEY"
-run_job "gemini_gemini-2.5-flash-image" "gemini/gemini-2.5-flash-image" "GEMINI_API_KEY"
+run_job "openai_gpt-5.4-mini" "uniapi/gpt-5.4-mini" "UNIAPI_API_KEY"
+run_job "openai_gpt-4o" "uniapi/gpt-4o" "UNIAPI_API_KEY"
+run_job "gemini_gemini-2.5-flash" "uniapi/gemini-2.5-flash" "UNIAPI_API_KEY"
 run_job "zhipu_glm-5v-turbo" "zhipu/glm-5v-turbo" "ZHIPU_API_KEY"
 
 wait
 
-echo "All caption v2 API jobs completed."
-echo "Outputs in: ${SAVE_DIR}"
-echo "Logs in   : ${LOG_DIR}"
+echo "All caption v2 API VG jobs completed."
+echo "VG outputs in: work_dirs/vg/caption_api"
+# SVG block removed by user request — VG only.
 

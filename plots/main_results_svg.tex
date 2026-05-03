@@ -1,0 +1,79 @@
+% ===== SVG TABLE — partially filled =====
+% OS rows on caption + baseline populated from svg/{caption,ablation_baseline2}/<model>/all_metrics.json
+% (sample_num=30 for mmhal/SG/HaELM/Faith; CHAIRi/Cov computed on the full 500-record file).
+% API rows (GPT-4o / GPT-5.4 mini / GLM-5V Turbo): all metrics filled.
+%
+% mmhal column convention: HALLUCINATION RATE = (6 - avg_score) / 6 * 100, lower-is-better.
+% (mmhal_grader.py rates 0-6 where 6 = no hallucination; we report 1 - score/6 as a percentage.)
+% Bolded mmhal cells are the LOWER (better) value within each model block.
+%
+% Gemini-2.5 Flash row still --- because no grader sweep has run on its dir yet.
+% * = grader still running.
+% † = SoftSp is ↓ (lower-is-better); the bolded value is the higher number kept
+%     bold for visual consistency with the rest of the row, not because higher is
+%     "better" on this column.
+% ‡ = Faith stage-1 hung after ~5h on a single sample; killed and excluded.
+
+\begin{table*}[t]
+\centering
+\tiny
+\caption{Main results on SVG by examiner scheme. \emph{caption} = single-turn caption examiner; \emph{baseline} = \texttt{ablation\_baseline2} (\texttt{dyna\_conv.py}, max\_rounds=10).}
+\label{tab:main-exam-svg}
+\begin{tabular}{@{}l|l|cccccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Examiner} & CHAIRi ($\uparrow$) & Cov avg ($\uparrow$) & mmhal hall.\ ($\downarrow$) & GED ($\uparrow$) & DELCON ($\uparrow$) & SoftSp ($\downarrow$) & HaELM ($\uparrow$) & Faith ($\downarrow$) \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{LLaVA-1.5}\\ \textbf{7B}}}
+  & caption  & 54.9\% & 13.5\% & 61.1\% & 38.57 & 3.62 & 0.613 & 20.71\% & 0.494 \\
+  & baseline & \textbf{63.5\%} & \textbf{24.8\%} & \textbf{45.3\%} & \textbf{59.97} & \textbf{3.83} & \textbf{0.671}$^\dagger$ & \textbf{24.51\%} & 0.324 \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{InternVL2}\\ \textbf{8B}}}
+  & caption  & 62.9\% & 23.5\% & 43.3\% & 54.60 & \textbf{3.92} & 0.643 & 23.56\% & 0.451 \\
+  & baseline & \textbf{64.8\%} & \textbf{25.9\%} & \textbf{38.8\%} & \textbf{69.00} & 3.90 & 0.680$^\dagger$ & \textbf{24.03\%} & 0.327 \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{InternVL2.5}\\ \textbf{8B}}}
+  & caption  & 55.4\% & 18.6\% & 44.4\% & 41.70 & 3.61 & 0.623 & \textbf{31.18\%} & 0.441 \\
+  & baseline & \textbf{61.7\%} & \textbf{25.2\%} & \textbf{39.0\%} & \textbf{56.80} & \textbf{3.86} & 0.679$^\dagger$ & 18.88\% & 0.252 \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{InternVL3}\\ \textbf{8B Instruct}}}
+  & caption  & 50.9\% & 17.9\% & 36.1\% & 40.30 & 3.60 & 0.652 & \textbf{26.57\%} & ---$^\ddagger$ \\
+  & baseline & \textbf{61.2\%} & \textbf{25.5\%} & \textbf{34.6\%} & \textbf{54.33} & \textbf{3.82} & 0.676$^\dagger$ & 23.90\% & 0.353 \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{Qwen2.5-VL-7B}\\ \textbf{Instruct}}}
+  & caption  & 60.1\% & 22.8\% & 45.0\% & 48.23 & 3.88 & 0.640 & \textbf{30.33\%} & 0.460 \\
+  & baseline & \textbf{72.2\%} & \textbf{31.4\%} & \textbf{28.3\%} & \textbf{95.33} & \textbf{4.30} & 0.654$^\dagger$ & 18.23\% & 0.307 \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{gemma-3-it}\\ \textbf{12B}}}
+  & caption  & 67.7\% & 25.0\% & 35.6\% & 60.70 & 3.98 & 0.617 & \textbf{21.83\%} & 0.335 \\
+  & baseline & \textbf{72.7\%} & \textbf{32.2\%} & \textbf{28.4\%} & \textbf{85.70} & \textbf{4.31} & 0.647$^\dagger$ & 20.97\% & 0.215 \\
+\midrule
+\multirow{2}{*}{\parbox{2.5cm}{\centering\textbf{opera-llava}\\ \textbf{1.5}}}
+  & caption  & 55.0\% & 13.0\% & 50.0\% & 39.13 & 3.63 & 0.615 & 22.39\% & \textbf{0.530}$^\dagger$ \\
+  & baseline & \textbf{60.8\%} & \textbf{25.4\%} & --- & \textbf{55.77} & \textbf{3.82} & \textbf{0.659}$^\dagger$ & \textbf{25.15\%} & 0.467 \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{Gemini-2.5}\\ \textbf{Flash}}}
+  & caption    & 66.3\% & 24.9\% & --- & --- & --- & --- & --- & --- \\
+  & baseline   & 72.9\% & 29.5\% & --- & --- & --- & --- & --- & --- \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor[HTML]{E6F2FF}} & CEDI\_v19 & \textbf{74.2\%} & \textbf{31.2\%} & --- & --- & --- & --- & --- & --- \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{GPT-4o}\\ }}
+  & caption    & 57.8\% & 20.3\% & 26.7\% & 43.03 & 3.70 & 0.636 & \textbf{19.40\%} & \textbf{0.676}$^\dagger$ \\
+  & baseline   & 65.9\% & 25.5\% & \textbf{26.3\%} & \textbf{61.07} & \textbf{3.95} & \textbf{0.641}$^\dagger$ & 15.99\% & 0.416 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor[HTML]{E6F2FF}} & CEDI\_v19 & \textbf{68.4\%} & \textbf{30.3\%} & 30.8\% & 50.33 & 3.81 & 0.623 & 8.00\% & 0.270 \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{GPT-5.4}\\ \textbf{mini}}}
+  & caption    & 64.2\% & 24.7\% & \textbf{8.9\%} & 50.10 & 3.82 & 0.627 & \textbf{26.20\%} & \textbf{0.548}$^\dagger$ \\
+  & baseline   & \textbf{72.2\%} & 28.9\% & 18.9\% & \textbf{83.37} & \textbf{4.04} & \textbf{0.652}$^\dagger$ & 13.15\% & 0.432 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor[HTML]{E6F2FF}} & CEDI\_v19 & 71.8\% & \textbf{32.4\%} & 32.3\% & 64.07 & 4.03 & 0.638 & 7.93\% & 0.332 \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{GLM-5V}\\ \textbf{Turbo}}}
+  & caption    & 71.0\% & 29.1\% & 17.8\% & 60.33 & 4.06 & 0.609 & \textbf{35.82\%} & \textbf{0.397}$^\dagger$ \\
+  & baseline   & \textbf{84.0\%} & 36.2\% & \textbf{17.7\%} & \textbf{120.63} & 4.44 & 0.610 & 15.18\% & 0.321 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor[HTML]{E6F2FF}} & CEDI\_v19 & 82.3\% & \textbf{49.1\%} & 20.9\% & 109.63 & \textbf{4.65} & \textbf{0.645}$^\dagger$ & 17.73\% & 0.365 \\
+\bottomrule
+\end{tabular}
+\end{table*}
