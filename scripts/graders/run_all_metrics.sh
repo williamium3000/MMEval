@@ -335,7 +335,8 @@ except Exception:
                   --sample_num "$SAMPLE_NUM" \
                   --max_workers 8 \
                   --distance_workers 8 \
-                  --llm_model "$_llm_model"
+                  --llm_model "$_llm_model" \
+                  --merge_first
             ) || echo "$TAG [SG/$method] failed (continuing)"
         }
 
@@ -445,7 +446,9 @@ log = os.path.join(out_dir, 'haelm.log')
 if os.path.exists(log):
     txt = open(log, 'r', encoding='utf-8', errors='ignore').read()
     m = re.search(r'Sentence level hallucination rate:\s*([\d.]+)', txt)
-    if m: he_rate = (1.0 - float(m.group(1))) * 100.0
+    # HaELM as raw sentence hallucination rate %, examiner perspective (higher = better):
+    # higher rate = more sentence-level hallucinations exposed = better examiner.
+    if m: he_rate = float(m.group(1)) * 100.0
 
 fs = load(fs_p)
 faith = None
@@ -471,14 +474,14 @@ summary = {
 json.dump(summary, open(sj, 'w'), indent=2)
 
 rows = [
-    ('CHAIRi (↑)',                summary['CHAIRi']),
-    ('Cov avg (↑)',               summary['Coverage_avg']),
-    ('mmhal hallucination % (↓)', summary['mmhal']),
-    ('GED/SG Distance (↑)',       summary['GED_SG_Distance']),
-    ('DELCON (↑)',                summary['DELCON']),
-    ('SoftSp (↓)',                summary['SoftSPICE']),
-    ('HaELM % (↑)',               summary['HaELM']),
-    ('Faith (↓)',                 summary['Faith']),
+    ('CHAIRi (↑)',                       summary['CHAIRi']),
+    ('Cov avg (↑)',                      summary['Coverage_avg']),
+    ('mmhal hallucination % (↑)',        summary['mmhal']),    # examiner perspective: more = better
+    ('GED/SG Distance (↑)',              summary['GED_SG_Distance']),
+    ('DELCON (↑)',                       summary['DELCON']),
+    ('SoftSp (↓)',                       summary['SoftSPICE']),
+    ('HaELM hallucination % (↑)',        summary['HaELM']),    # raw sentence_hall_rate, higher = better examiner
+    ('Faith (↓)',                        summary['Faith']),
 ]
 lines = ['=== ALL METRICS ===', f'input: {in_path}', '']
 for name, val in rows:
