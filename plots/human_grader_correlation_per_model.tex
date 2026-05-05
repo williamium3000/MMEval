@@ -1,0 +1,21 @@
+\begin{table*}[!htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Per-model Pearson correlation between human-annotated hallucination rate and each automatic grader, broken out by examiner and model. Same conventions as Table~\ref{tab:human-grader-corr}.}
+\label{tab:per-model-grader-corr}
+\begin{tabular}{ll|ccccccc}
+\toprule
+\textbf{Examiner} & \textbf{Model} & \textbf{CHAIRs} & \textbf{CHAIRi} & \textbf{MMHal} & \textbf{GED} & \textbf{DELCON} & \textbf{SoftSp} & \textbf{HaELM} \\
+\midrule
+baseline & LLaVA-1.5-7B & sat. \,\scriptsize(50) & $+0.359$ \,\scriptsize(50) & $+0.588$ \,\scriptsize(50) & --- & --- & --- & --- \\
+ & InternVL3-8B & $-0.028$ \,\scriptsize(50) & $-0.108$ \,\scriptsize(50) & $+0.115$ \,\scriptsize(50) & --- & --- & --- & --- \\
+ & Opera-LLaVA-1.5 & sat. \,\scriptsize(43) & $+0.128$ \,\scriptsize(43) & $+0.523$ \,\scriptsize(43) & --- & --- & --- & --- \\
+\midrule
+CEDI & LLaVA-1.5-7B & sat. \,\scriptsize(50) & $-0.015$ \,\scriptsize(50) & $+0.279$ \,\scriptsize(50) & --- & --- & --- & --- \\
+ & InternVL3-8B & sat. \,\scriptsize(50) & $+0.093$ \,\scriptsize(50) & $+0.464$ \,\scriptsize(50) & $-0.083$ \,\scriptsize(50) & $+0.104$ \,\scriptsize(50) & --- & --- \\
+ & Qwen3-VL-8B & sat. \,\scriptsize(50) & $-0.192$ \,\scriptsize(50) & $+0.427$ \,\scriptsize(50) & --- & --- & --- & --- \\
+ & Opera-LLaVA-1.5 & sat. \,\scriptsize(50) & $-0.255$ \,\scriptsize(50) & $-0.119$ \,\scriptsize(50) & $-0.240$ \,\scriptsize(50) & $+0.120$ \,\scriptsize(50) & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table*}

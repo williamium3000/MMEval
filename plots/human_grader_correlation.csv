@@ -1,0 +1,15 @@
+examiner,grader,pearson_r,n
+baseline,chairs,0.0592,143
+baseline,chairi,0.2701,143
+baseline,mmhal,0.6208,143
+baseline,ged,,2
+baseline,delcon,,2
+baseline,softspice,,0
+baseline,haelm,,2
+CEDI,chairs,,200
+CEDI,chairi,0.1796,200
+CEDI,mmhal,0.4871,200
+CEDI,ged,-0.2391,100
+CEDI,delcon,0.0956,100
+CEDI,softspice,,0
+CEDI,haelm,,0

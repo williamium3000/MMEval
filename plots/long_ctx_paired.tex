@@ -1,0 +1,28 @@
+\begin{table}[h]
+\centering
+\tiny
+\setlength{\tabcolsep}{4pt}
+\caption{Paired long-context vs.\ text-only examiner on the 10 models that were
+run under both settings. Cells show the per-turn MMHal hallucination rate
+(\%); $\Delta$ is the long-context rate minus the v18 rate. Positive
+$\Delta$ means long context elicited \emph{more} hallucinations.}
+\label{tab:exam-longctx-paired}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{ALL} & \textbf{regular} & \textbf{follow-up} & \textbf{adversarial} & \textbf{unanswerable} \\
+\midrule
+InternVL2-2B & 50.6 $\to$ 58.6~~\textcolor{red!70!black}{$\triangle$ +8.0} & 50.2 $\to$ 63.9~~\textcolor{red!70!black}{$\triangle$ +13.7} & 65.7 $\to$ 61.5~~\textcolor{green!60!black}{$\triangledown$ -4.1} & 29.3 $\to$ 58.3~~\textcolor{red!70!black}{$\triangle$ +29.0} & 74.9 $\to$ 39.9~~\textcolor{green!60!black}{$\triangledown$ -35.0} \\
+InternVL2-8B & 33.6 $\to$ 56.0~~\textcolor{red!70!black}{$\triangle$ +22.3} & 38.3 $\to$ 60.4~~\textcolor{red!70!black}{$\triangle$ +22.1} & 40.0 $\to$ 53.3~~\textcolor{red!70!black}{$\triangle$ +13.3} & 18.1 $\to$ 60.1~~\textcolor{red!70!black}{$\triangle$ +41.9} & 51.5 $\to$ 37.3~~\textcolor{green!60!black}{$\triangledown$ -14.2} \\
+InternVL2.5-2B & 39.1 $\to$ 63.7~~\textcolor{red!70!black}{$\triangle$ +24.6} & 41.5 $\to$ 61.4~~\textcolor{red!70!black}{$\triangle$ +19.9} & 52.5 $\to$ 59.0~~\textcolor{red!70!black}{$\triangle$ +6.4} & 26.7 $\to$ 70.5~~\textcolor{red!70!black}{$\triangle$ +43.8} & 37.1 $\to$ 59.9~~\textcolor{red!70!black}{$\triangle$ +22.9} \\
+InternVL2.5-8B & 26.9 $\to$ 54.0~~\textcolor{red!70!black}{$\triangle$ +27.0} & 31.3 $\to$ 56.7~~\textcolor{red!70!black}{$\triangle$ +25.4} & 31.5 $\to$ 53.5~~\textcolor{red!70!black}{$\triangle$ +22.0} & 15.4 $\to$ 58.2~~\textcolor{red!70!black}{$\triangle$ +42.8} & 37.3 $\to$ 35.6~~\textcolor{green!60!black}{$\triangledown$ -1.7} \\
+InternVL3-2B & 40.9 $\to$ 62.2~~\textcolor{red!70!black}{$\triangle$ +21.3} & 37.6 $\to$ 63.9~~\textcolor{red!70!black}{$\triangle$ +26.3} & 51.2 $\to$ 59.4~~\textcolor{red!70!black}{$\triangle$ +8.2} & 29.1 $\to$ 64.7~~\textcolor{red!70!black}{$\triangle$ +35.6} & 58.0 $\to$ 55.6~~\textcolor{green!60!black}{$\triangledown$ -2.4} \\
+Qwen2.5-VL-3B & 23.0 $\to$ 36.4~~\textcolor{red!70!black}{$\triangle$ +13.4} & 31.7 $\to$ 36.6~~\textcolor{red!70!black}{$\triangle$ +4.9} & 36.1 $\to$ 45.5~~\textcolor{red!70!black}{$\triangle$ +9.4} & 7.3 $\to$ 30.8~~\textcolor{red!70!black}{$\triangle$ +23.4} & 14.5 $\to$ 31.5~~\textcolor{red!70!black}{$\triangle$ +17.1} \\
+Qwen2.5-VL-7B & 24.2 $\to$ 23.8~~\textcolor{green!60!black}{$\triangledown$ -0.5} & 32.8 $\to$ 32.8~~\textcolor{green!60!black}{$\triangledown$ -0.0} & 37.5 $\to$ 39.5~~\textcolor{red!70!black}{$\triangle$ +2.1} & 9.5 $\to$ 9.2~~\textcolor{green!60!black}{$\triangledown$ -0.4} & 14.0 $\to$ 7.3~~\textcolor{green!60!black}{$\triangledown$ -6.7} \\
+gemma-3-12B & 41.9 $\to$ 51.6~~\textcolor{red!70!black}{$\triangle$ +9.6} & 37.5 $\to$ 36.8~~\textcolor{green!60!black}{$\triangledown$ -0.7} & 47.2 $\to$ 45.4~~\textcolor{green!60!black}{$\triangledown$ -1.8} & 36.3 $\to$ 61.9~~\textcolor{red!70!black}{$\triangle$ +25.6} & 56.6 $\to$ 71.1~~\textcolor{red!70!black}{$\triangle$ +14.5} \\
+gemma-3-4B & 41.4 $\to$ 68.0~~\textcolor{red!70!black}{$\triangle$ +26.6} & 37.5 $\to$ 49.5~~\textcolor{red!70!black}{$\triangle$ +12.1} & 40.4 $\to$ 46.9~~\textcolor{red!70!black}{$\triangle$ +6.5} & 34.7 $\to$ 87.9~~\textcolor{red!70!black}{$\triangle$ +53.2} & 72.4 $\to$ 97.9~~\textcolor{red!70!black}{$\triangle$ +25.4} \\
+LLaVA-1.5-7B & 65.3 $\to$ 65.2~~\textcolor{green!60!black}{$\triangledown$ -0.0} & 35.1 $\to$ 33.4~~\textcolor{green!60!black}{$\triangledown$ -1.7} & 51.9 $\to$ 51.4~~\textcolor{green!60!black}{$\triangledown$ -0.4} & 92.3 $\to$ 91.2~~\textcolor{green!60!black}{$\triangledown$ -1.1} & 99.6 $\to$ 99.6~~\textcolor{red!70!black}{$\triangle$ +0.0} \\
+\midrule
+\textbf{mean $\Delta$} & \textcolor{red!70!black}{$\triangle$ +15.2} & \textcolor{red!70!black}{$\triangle$ +12.2} & \textcolor{red!70!black}{$\triangle$ +6.2} & \textcolor{red!70!black}{$\triangle$ +29.4} & \textcolor{red!70!black}{$\triangle$ +2.0} \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,20 @@
+\begin{table*}[h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Per-image Pearson correlation between human-annotated hallucination
+rate and each automatic grader, split by examiner. Sample counts $n$ in
+parentheses are images with paired non-missing observations. ``---'' = grader
+was not run on the human-annotated models in that examiner setting; ``sat.''
+= the grader saturates (zero variance) on this slice and the correlation is
+undefined.}
+\label{tab:human-grader-corr}
+\begin{tabular}{l|ccccccc}
+\toprule
+\textbf{Examiner} & \textbf{CHAIRs} & \textbf{CHAIRi} & \textbf{MMHal} & \textbf{GED} & \textbf{DELCON} & \textbf{SoftSp} & \textbf{HaELM} \\
+\midrule
+baseline & $+0.059$ \,\scriptsize(143) & $+0.270$ \,\scriptsize(143) & $+0.621$ \,\scriptsize(143) & --- & --- & --- & --- \\
+CEDI & sat. \,\scriptsize(200) & $+0.180$ \,\scriptsize(200) & $+0.487$ \,\scriptsize(200) & $-0.239$ \,\scriptsize(100) & $+0.096$ \,\scriptsize(100) & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table*}

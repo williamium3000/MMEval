@@ -583,6 +583,9 @@ def main():
     parser.add_argument("--verify_only", action="store_true", help="Lighter path when input already has questions: use existing qa['answer'], VLM only, Qwen for GT only (no full transcript/scene graph)")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--vlm_workers", type=int, default=36, help="Max parallel VLM API calls per batch")
+    parser.add_argument("--vlm_batch_per_turn", action="store_true",
+                        help="Legacy: send all POPE questions for one turn in a single VLM call. "
+                             "Default is isolated (1 call per question) which avoids list-anchoring bias.")
     parser.add_argument("--qwen_workers", type=int, default=18, help="Max parallel Qwen API calls per batch (all samples in batch queried concurrently)")
     args = parser.parse_args()
 
@@ -805,15 +808,35 @@ def main():
                     dynamic_list = qwen_response_to_yesno_list(response, questions, get_qwen)
                     for i, qa in enumerate(qa_list):
                         qa["dynamic_response"] = dynamic_list[i] if i < len(dynamic_list) else "Unknown"
-                    # (2) VLM: one call per turn — image + list of questions, parse list of Yes/No
+                    # (2) VLM: default = isolated (1 call per question, no list-anchoring bias).
+                    # Pass --vlm_batch_per_turn to revert to the old multi-question batched call.
                     try:
                         if use_vlm_api:
-                            single_raw = call_vlm_api_multi(args.vlm_api_url, image_path, questions, vlm_api_model, api_key=vlm_api_key)
-                            single_list = parse_yesno_list(single_raw, len(questions))
-                            for i, qa in enumerate(qa_list):
-                                qa["single_response"] = single_list[i] if i < len(single_list) else "Unknown"
-                            for qa in qa_list:
-                                qa["single_response_raw"] = single_raw
+                            if getattr(args, "vlm_batch_per_turn", False):
+                                single_raw = call_vlm_api_multi(args.vlm_api_url, image_path, questions, vlm_api_model, api_key=vlm_api_key)
+                                single_list = parse_yesno_list(single_raw, len(questions))
+                                for i, qa in enumerate(qa_list):
+                                    qa["single_response"] = single_list[i] if i < len(single_list) else "Unknown"
+                                for qa in qa_list:
+                                    qa["single_response_raw"] = single_raw
+                            else:
+                                # Isolated: one VLM call per question, parallelized.
+                                from concurrent.futures import ThreadPoolExecutor
+                                def _ask_one(q):
+                                    prompt = (
+                                        "Look at the image and answer the following question with ONLY Yes or No. "
+                                        "Write nothing else.\n\nQuestion: " + q + "\n\nAnswer:"
+                                    )
+                                    try:
+                                        return call_vlm_api(args.vlm_api_url, image_path, prompt, vlm_api_model, api_key=vlm_api_key)
+                                    except Exception as e:
+                                        return f"__ERROR__ {type(e).__name__}: {e}"
+                                with ThreadPoolExecutor(max_workers=min(args.vlm_workers, len(questions))) as ex:
+                                    raws = list(ex.map(_ask_one, questions))
+                                for i, qa in enumerate(qa_list):
+                                    parsed = parse_yesno_list(raws[i], 1)
+                                    qa["single_response"] = parsed[0] if parsed else "Unknown"
+                                    qa["single_response_raw"] = raws[i]
                         else:
                             # Local VLM (e.g. Opera): one call per question
                             img = open_image_for_vlm(image_path)
