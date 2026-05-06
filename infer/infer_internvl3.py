@@ -103,33 +103,36 @@ def eval_model(model, tokenizer, image_file, query, conversation_history=None):
         str or tuple: If conversation_history was None, returns just the response string.
                      Otherwise, returns (response, updated_conversation_history).
     """
-    # Track whether conversation_history was originally None to determine return type
-    was_none = conversation_history is None
-    
+    # Treat both None and empty history as "first turn" — the wrapper passes []
+    # on first call and the only previously-handled case was `is None`, which
+    # silently dropped the image on round 0.
+    is_first_turn = not conversation_history
+    return_tuple = conversation_history is not None  # wrapper unpacks a tuple
+
     generation_config = dict(max_new_tokens=1024, do_sample=False)
-    
-    # For multi-round conversation, pass history and get it back
-    # Reference: single-image multi-round conversation from official docs
-    if not was_none:
-        # Use existing conversation history
-        # In later rounds, only send text query (no image token, no image processing)
-        # InternVL3's chat API signature: model.chat(tokenizer, pixel_values, query, generation_config, history, return_history)
-        # We pass None for pixel_values in later rounds to follow image visibility rule.
-        # If InternVL3 requires pixel_values even in later rounds, the conversation wrapper
-        # in loader.py should be updated to store pixel_values from first round.
-        query_text = query  # Only text, no <image> token
-        response, conversation_history = model.chat(
-            tokenizer, None, query_text, generation_config,
-            history=conversation_history, return_history=True
-        )
-        return response, conversation_history
-    else:
-        # Start new conversation (history will be None)
-        # First round: include image token and process image
+
+    if is_first_turn:
+        # Round 0: encode the image and prepend the <image> token. We always
+        # use return_history=True so the response/history pair is consistent
+        # whether we're invoked through the wrapper (which passes []) or the
+        # legacy single-shot path (which passes None).
         query_with_image = f'<image>\n{query}'
         pixel_values = load_image(image_file, max_num=12).to(torch.bfloat16).cuda()
-        response = model.chat(tokenizer, pixel_values, query_with_image, generation_config)
-        return response
+        response, conversation_history = model.chat(
+            tokenizer, pixel_values, query_with_image, generation_config,
+            history=None, return_history=True,
+        )
+    else:
+        # Later rounds: pass history (image features are already encoded in it)
+        # and skip pixel_values. See InternVL3 multi-turn docs.
+        response, conversation_history = model.chat(
+            tokenizer, None, query, generation_config,
+            history=conversation_history, return_history=True,
+        )
+
+    if return_tuple:
+        return response, conversation_history
+    return response
 
 def split_model(model_name):
     device_map = {}

@@ -237,12 +237,17 @@ def load_model(args):
         from .infer_internvl3 import eval_model as eval_model_internvl3, split_model
         from transformers import AutoModel, AutoTokenizer
         device_map = split_model(args.model_path)
+        # use_flash_attn requires the flash_attn pip package; the qwenvl3 env
+        # doesn't have it (only a precompiled wheel-less source build is
+        # available), so default to off. Override with INTERNVL_USE_FLASH_ATTN=1.
+        import os as _os
+        _use_fa = _os.environ.get("INTERNVL_USE_FLASH_ATTN", "0") == "1"
         model = AutoModel.from_pretrained(
             args.model_path,
             torch_dtype=torch.bfloat16,
             load_in_8bit=False,
             low_cpu_mem_usage=True,
-            use_flash_attn=True,
+            use_flash_attn=_use_fa,
             trust_remote_code=True,
             device_map=device_map).eval()
         tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True, use_fast=False)
