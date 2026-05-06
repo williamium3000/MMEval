@@ -21,6 +21,9 @@ import argparse
 import json
 import tqdm
 import copy
+import gc
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.sg import SceneGraphData
 import random
 import traceback
@@ -899,6 +902,14 @@ if __name__ == "__main__":
     parser.add_argument('--max_rounds', type=int, default=20)
     parser.add_argument('--debug', action='store_true',
                        help='Enable debug mode: inject "what do you see" question after first query to verify image context')
+    parser.add_argument('--parallel', type=int, default=1,
+                       help='Process this many samples concurrently. Local VLM is '
+                            'serialized via a lock; only API calls truly parallelize.')
+    parser.add_argument('--start_idx', type=int, default=0,
+                       help='Slice samples[start_idx:end_idx] before processing.')
+    parser.add_argument('--end_idx', type=int, default=None)
+    parser.add_argument('--reverse', action='store_true',
+                       help='Process samples in reverse order (after slicing).')
     args = parser.parse_args()
     
     # This script is for conversation-aware models, so always enable conversation history
@@ -911,11 +922,36 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
     # need to figure out how to eval on different models
     eval_func = load_model(args)
-    
+
+    # When --parallel > 1 the worker threads share the same local model.
+    # transformers.generate() is not thread-safe (KV cache, attention scratch
+    # buffers); serialize VLM calls through a lock. API calls remain parallel.
+    if args.parallel > 1:
+        _vlm_lock = threading.Lock()
+        _orig_eval = eval_func
+        def eval_func(**kwargs):
+            with _vlm_lock:
+                return _orig_eval(**kwargs)
+        # Forward conversation-reset hooks so EvalSample's
+        # `if hasattr(self.eval_func, 'reset'):` still triggers in parallel
+        # mode. Without this, conversation_history accumulates across
+        # conversations within a worker thread until the prompt overflows
+        # the model's context window — observed as catastrophic empty/
+        # gibberish output on llava-1.5 after ~5-10 conversations.
+        if hasattr(_orig_eval, 'reset'):
+            eval_func.reset = _orig_eval.reset
+        if hasattr(_orig_eval, 'reset_conversation'):
+            eval_func.reset_conversation = _orig_eval.reset_conversation
+
     samples = load_data(args)
-    
-    llm_chat_context = LLMChat(model_name="gpt-5")  # For context generation
-    llm_chat_conv = LLMChat(model_name="gpt-5.4-mini")  # For conversation generation
+    end = args.end_idx if args.end_idx is not None else len(samples)
+    samples = samples[args.start_idx:end]
+    if args.reverse:
+        samples = list(reversed(samples))
+    print(f"Sample slice: start_idx={args.start_idx} end_idx={end} reverse={args.reverse} -> {len(samples)} samples")
+
+    llm_chat_context = LLMChat(model_name="gpt-5.4-2026-03-05")  # For context generation
+    llm_chat_conv = LLMChat(model_name="gpt-5.4-2026-03-05")  # For conversation generation
     
     # Initialize cache and resume functionality
     to_save = []
@@ -933,38 +969,62 @@ if __name__ == "__main__":
     total_conversations = total_samples * 2  # 2 conversations per sample
     completed_conversations = len(cached_data)
     
-    for i, sample in enumerate(tqdm.tqdm(samples, desc="Processing samples")):
+    _save_lock = threading.Lock()
+    try:
+        import torch as _torch
+    except ImportError:
+        _torch = None
+
+    def _process(i_sample):
+        i, sample = i_sample
         sample_id = get_sample_id(sample)
-        
-        # Check how many contexts are already cached for this sample
+
         cached_contexts = get_cached_contexts_for_sample(sample_id, cached_data)
         num_cached = len(cached_contexts)
-        
+
         if num_cached >= 2:
             print(f"Skipping sample {i+1}/{total_samples} (both conversations already processed): {sample_id}")
-            continue
+            return []
         elif num_cached == 1:
             print(f"Processing sample {i+1}/{total_samples}: {sample_id} (1/2 conversations cached, generating 2nd)")
         else:
             print(f"Processing sample {i+1}/{total_samples}: {sample_id} (generating both conversations)")
-        
+
         try:
             eval_sample = EvalSample(sample, llm_chat_context, llm_chat_conv, eval_func)
-            # Pass cached contexts so it knows which ones to generate
             conv = eval_sample.run(prev_contexts=cached_contexts if num_cached > 0 else None)
-            to_save.extend(conv)
-            completed_conversations += len(conv)
-            
-            # Save cache incrementally if cache file is provided
-            if args.cache_file:
-                save_cache(args.cache_file, to_save)
-                print(f"Progress: {completed_conversations}/{total_conversations} conversations completed")
-                
         except Exception as e:
             print(f"Error processing sample {sample_id}: {e}")
             print("Continuing with next sample...")
             traceback.print_exc()
-            continue
+            return []
+        finally:
+            # Drop tensor refs that the EvalSample held so RSS doesn't climb
+            # unbounded over a long run (the OOM seen on v19ban2type).
+            try:
+                del eval_sample
+            except NameError:
+                pass
+            gc.collect()
+            if _torch is not None and _torch.cuda.is_available():
+                _torch.cuda.empty_cache()
+
+        with _save_lock:
+            to_save.extend(conv)
+            if args.cache_file:
+                save_cache(args.cache_file, to_save)
+                print(f"Progress: {len(to_save)}/{total_conversations} conversations completed")
+        return conv
+
+    if args.parallel > 1:
+        print(f"Processing samples with concurrency={args.parallel} (VLM serialized, API parallel)")
+        with ThreadPoolExecutor(max_workers=args.parallel) as pool:
+            futures = [pool.submit(_process, (i, s)) for i, s in enumerate(samples)]
+            for _ in tqdm.tqdm(as_completed(futures), total=len(futures), desc="Samples"):
+                pass
+    else:
+        for i, sample in enumerate(tqdm.tqdm(samples, desc="Processing samples")):
+            _process((i, sample))
     
     # Final save to output file
     with open(args.outfile, "w") as f:
