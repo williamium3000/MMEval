@@ -78,13 +78,37 @@ def load_model(args):
         from .infer_llava import eval_model as eval_model_llava
         from transformers import LlavaForConditionalGeneration, AutoProcessor
         model = LlavaForConditionalGeneration.from_pretrained(
-            args.model_path, 
-            torch_dtype=torch.float16, 
-            low_cpu_mem_usage=True, 
+            args.model_path,
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True,
         ).to(0)
 
         processor = AutoProcessor.from_pretrained(args.model_path)
-        return partial(eval_model_llava, model=model, processor=processor)
+
+        # Conditionally use conversation wrapper based on use_conversation flag.
+        # Without this, v18conv / v19conv ran llava as single-shot per round
+        # (no chat memory) because partial(...) doesn't hold history state.
+        use_conversation = getattr(args, 'use_conversation', False)
+
+        if use_conversation:
+            class LlavaConversationWrapper:
+                def __init__(self, processor, model):
+                    self.processor = processor
+                    self.model = model
+                    self.conversation_history = []
+
+                def __call__(self, image_file, query):
+                    output, self.conversation_history = eval_model_llava(
+                        self.processor, self.model, image_file, query, self.conversation_history
+                    )
+                    return output
+
+                def reset(self):
+                    self.conversation_history = []
+
+            return LlavaConversationWrapper(processor=processor, model=model)
+        else:
+            return partial(eval_model_llava, model=model, processor=processor)
     elif "blip2" in args.model_path:
         from .infer_blip2 import eval_model as eval_model_blip2
         from transformers import Blip2Processor, Blip2ForConditionalGeneration
