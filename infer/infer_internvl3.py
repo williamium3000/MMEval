@@ -111,22 +111,28 @@ def eval_model(model, tokenizer, image_file, query, conversation_history=None):
 
     generation_config = dict(max_new_tokens=1024, do_sample=False)
 
+    # Encode the image every turn. The official docs suggest passing
+    # pixel_values=None on later turns, but InternVLChatModel.generate() only
+    # patches vision features into IMG_CONTEXT_TOKEN positions when
+    # pixel_values is non-None — otherwise the model does text-only generation
+    # despite the history containing an <image> token from turn 0. So we
+    # always re-feed pixel_values to keep the image visible across turns.
+    pixel_values = load_image(image_file, max_num=12).to(torch.bfloat16).cuda()
+
     if is_first_turn:
-        # Round 0: encode the image and prepend the <image> token. We always
-        # use return_history=True so the response/history pair is consistent
-        # whether we're invoked through the wrapper (which passes []) or the
-        # legacy single-shot path (which passes None).
+        # Round 0: prepend <image> to the question; chat() will substitute it
+        # with the image-token block before generation.
         query_with_image = f'<image>\n{query}'
-        pixel_values = load_image(image_file, max_num=12).to(torch.bfloat16).cuda()
         response, conversation_history = model.chat(
             tokenizer, pixel_values, query_with_image, generation_config,
             history=None, return_history=True,
         )
     else:
-        # Later rounds: pass history (image features are already encoded in it)
-        # and skip pixel_values. See InternVL3 multi-turn docs.
+        # Later rounds: history already contains <image> in turn 0; chat() only
+        # replaces the first <image> occurrence, so the new question must NOT
+        # contain another <image> token.
         response, conversation_history = model.chat(
-            tokenizer, None, query, generation_config,
+            tokenizer, pixel_values, query, generation_config,
             history=conversation_history, return_history=True,
         )
 
