@@ -217,11 +217,13 @@ sys.exit(0 if not has_gt else 1)
             if [ "$SKIP_EXISTING" = true ] && nonempty "$MMHAL_OUT"; then
                 echo "$TAG [MMHAL] reuse existing $MMHAL_OUT"
             else
-                echo "$TAG [MMHAL] running mmhal_grader.py …"
+                echo "$TAG [MMHAL] running mmhal_grader.py … (workers=${MMHAL_WORKERS:-16})"
                 local gt_type_arg=""
                 [ "$IS_CAPTION_STYLE" = true ] && gt_type_arg="--gt-type caption"
                 local first_n_arg=""
                 [ -n "$FIRST_N" ] && first_n_arg="--first-n $FIRST_N"
+                local no_skip_arg=""
+                [ "$SKIP_EXISTING" = false ] && no_skip_arg="--no-skip"
                 ( cd "$ROOT_DIR" && \
                   PYTHONPATH="$ROOT_DIR" \
                   "$MMHAL_PY" grader/mmhal/mmhal_grader.py \
@@ -230,7 +232,8 @@ sys.exit(0 if not has_gt else 1)
                       --gpt-model  "${MMHAL_MODEL:-${REMOTE_API_MODEL:-Llama-3.1-70B-Instruct}}" \
                       --api-url    "$REMOTE_API_URL" \
                       --api-key    "$REMOTE_API_KEY" \
-                      $gt_type_arg $first_n_arg
+                      --workers    "${MMHAL_WORKERS:-16}" \
+                      $no_skip_arg $gt_type_arg $first_n_arg
                 ) || echo "$TAG [MMHAL] failed (continuing)"
             fi
         fi
@@ -245,10 +248,11 @@ sys.exit(0 if not has_gt else 1)
                 if [ ! -d "$LLAMA_PATH" ] || [ ! -d "$HE_CKPT" ]; then
                     echo "$TAG [HaELM] checkpoints missing — skipping."
                 else
-                    echo "$TAG [HaELM] running haelm.py …"
+                    echo "$TAG [HaELM] running haelm.py … (GPU=${HAELM_GPU:-2})"
                     ( cd "$ROOT_DIR" && \
                       PYTHONNOUSERSITE=1 \
                       PYTHONPATH="$ROOT_DIR" \
+                      CUDA_VISIBLE_DEVICES="${HAELM_GPU:-2}" \
                       "$HAELM_PY" grader/HaELM/haelm.py \
                           --conv "$INPUT_JSON" \
                           --llama_path "$LLAMA_PATH" \
@@ -260,34 +264,34 @@ sys.exit(0 if not has_gt else 1)
             fi
         fi
 
-        # 4. Faith (local GPU + Qwen)
-        if want faith; then
-            if [ "$SKIP_EXISTING" = true ] && nonempty "$FS_OUT"; then
-                echo "$TAG [Faith] reuse existing $FS_OUT"
-            else
-                local LLAVA_PATH="${LLAVA_PATH:-data/checkpoints/llava-v1.5-7b}"
-                if ! "$FAITH_PY" -c "import llava" 2>/dev/null; then
-                    echo "$TAG [Faith] llava not installed in $FAITH_PY — skipping."
-                elif [ ! -d "$LLAVA_PATH" ]; then
-                    echo "$TAG [Faith] LLaVA checkpoint missing — skipping."
-                else
-                    echo "$TAG [Faith] running faithscore/eval.py …"
-                    mkdir -p "$FS_DIR"
-                    ( cd "$ROOT_DIR/grader/faithscore" && \
-                      PYTHONNOUSERSITE=1 \
-                      PYTHONPATH="$ROOT_DIR/grader/faithscore:$ROOT_DIR" \
-                      OPENAI_API_KEY="$REMOTE_API_KEY" \
-                      OPENAI_BASE_URL="${REMOTE_BASE_URL:-${REMOTE_API_URL%/chat/completions}}" \
-                      "$FAITH_PY" eval.py --mode eval \
-                          --conv "$INPUT_JSON" \
-                          --vem_type llava --llava_path "$ROOT_DIR/$LLAVA_PATH" \
-                          --openai_model "${REMOTE_API_MODEL:-Qwen3-30B-A3B-Instruct-2507}" \
-                          --sample_num "$FIRST_N" \
-                          --save_judgments "$FS_OUT" 2>&1 | tee "$OUT_DIR/faithscore.log"
-                    ) || echo "$TAG [Faith] failed (continuing)"
-                fi
-            fi
-        fi
+        # 4. Faith — DISABLED (kept for reference; Faith stage-1 hangs and is no longer run)
+        # if want faith; then
+        #     if [ "$SKIP_EXISTING" = true ] && nonempty "$FS_OUT"; then
+        #         echo "$TAG [Faith] reuse existing $FS_OUT"
+        #     else
+        #         local LLAVA_PATH="${LLAVA_PATH:-data/checkpoints/llava-v1.5-7b}"
+        #         if ! "$FAITH_PY" -c "import llava" 2>/dev/null; then
+        #             echo "$TAG [Faith] llava not installed in $FAITH_PY — skipping."
+        #         elif [ ! -d "$LLAVA_PATH" ]; then
+        #             echo "$TAG [Faith] LLaVA checkpoint missing — skipping."
+        #         else
+        #             echo "$TAG [Faith] running faithscore/eval.py …"
+        #             mkdir -p "$FS_DIR"
+        #             ( cd "$ROOT_DIR/grader/faithscore" && \
+        #               PYTHONNOUSERSITE=1 \
+        #               PYTHONPATH="$ROOT_DIR/grader/faithscore:$ROOT_DIR" \
+        #               OPENAI_API_KEY="$REMOTE_API_KEY" \
+        #               OPENAI_BASE_URL="${REMOTE_BASE_URL:-${REMOTE_API_URL%/chat/completions}}" \
+        #               "$FAITH_PY" eval.py --mode eval \
+        #                   --conv "$INPUT_JSON" \
+        #                   --vem_type llava --llava_path "$ROOT_DIR/$LLAVA_PATH" \
+        #                   --openai_model "${REMOTE_API_MODEL:-Qwen3-30B-A3B-Instruct-2507}" \
+        #                   --sample_num "$FIRST_N" \
+        #                   --save_judgments "$FS_OUT" 2>&1 | tee "$OUT_DIR/faithscore.log"
+        #             ) || echo "$TAG [Faith] failed (continuing)"
+        #         fi
+        #     fi
+        # fi
         echo "==== $TAG TRACK_QWEN end at $(date +%T) ===="
     ) &
     local pid_qwen=$!
@@ -359,29 +363,29 @@ json.dump(d, open(dst,'w'), indent=4)
             run_sg delta_con "$SG_DC_OUT"
         fi
 
-        # 3. SoftSPICE (local — depends on SG outputs but no LLM)
-        if want softsp; then
-            if [ "$SKIP_EXISTING" = true ] && nonempty "$SP_SUMMARY"; then
-                echo "$TAG [SoftSPICE] reuse existing $SP_SUMMARY"
-            else
-                echo "$TAG [SoftSPICE] running llm_parser.py --sg_dir …"
-                mkdir -p "$SP_DIR"
-                for f in "$SG_GED_OUT" "$SG_DC_OUT"; do
-                    [ -f "$f" ] && cp -f "$f" "$SP_DIR/$(basename "$f")"
-                done
-                if ls "$SP_DIR"/*.json >/dev/null 2>&1; then
-                    ( cd "$ROOT_DIR" && \
-                      PYTHONNOUSERSITE=1 \
-                      PYTHONPATH="$EXTRA_PKGS:$ROOT_DIR" \
-                      "$SG_PY" scripts/graders/llm_parser.py \
-                          --sg_dir "$SP_DIR" \
-                          --metric all
-                    ) || echo "$TAG [SoftSPICE] failed (continuing)"
-                else
-                    echo "$TAG [SoftSPICE] no SG outputs to score (skipping)"
-                fi
-            fi
-        fi
+        # 3. SoftSPICE — DISABLED (no longer reported; metric correlation low)
+        # if want softsp; then
+        #     if [ "$SKIP_EXISTING" = true ] && nonempty "$SP_SUMMARY"; then
+        #         echo "$TAG [SoftSPICE] reuse existing $SP_SUMMARY"
+        #     else
+        #         echo "$TAG [SoftSPICE] running llm_parser.py --sg_dir …"
+        #         mkdir -p "$SP_DIR"
+        #         for f in "$SG_GED_OUT" "$SG_DC_OUT"; do
+        #             [ -f "$f" ] && cp -f "$f" "$SP_DIR/$(basename "$f")"
+        #         done
+        #         if ls "$SP_DIR"/*.json >/dev/null 2>&1; then
+        #             ( cd "$ROOT_DIR" && \
+        #               PYTHONNOUSERSITE=1 \
+        #               PYTHONPATH="$EXTRA_PKGS:$ROOT_DIR" \
+        #               "$SG_PY" scripts/graders/llm_parser.py \
+        #                   --sg_dir "$SP_DIR" \
+        #                   --metric all
+        #             ) || echo "$TAG [SoftSPICE] failed (continuing)"
+        #         else
+        #             echo "$TAG [SoftSPICE] no SG outputs to score (skipping)"
+        #         fi
+        #     fi
+        # fi
         echo "==== $TAG TRACK_API end at $(date +%T) ===="
     ) &
     local pid_api=$!

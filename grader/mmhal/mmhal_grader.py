@@ -4,6 +4,7 @@ import json
 import time
 import requests
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils.coco import format_case_coco
 from utils.vg import format_case_vg
 
@@ -204,6 +205,10 @@ if __name__ == '__main__':
                        help='API authorization key. Overrides OPENAI_API_KEY env var.')
     parser.add_argument('--first-n', type=int, default=None, metavar='N',
                        help='Only evaluate the first N items (records) in the JSON. Useful for testing.')
+    parser.add_argument('--workers', type=int, default=int(os.environ.get('MMHAL_WORKERS', '1')),
+                       help='Number of parallel grading threads (default: 1 / env MMHAL_WORKERS).')
+    parser.add_argument('--no-skip', action='store_true',
+                       help='Force re-grading even if --evaluation already exists (skip cache load).')
     args = parser.parse_args()
 
     # Set default evaluation path if not provided
@@ -230,113 +235,113 @@ if __name__ == '__main__':
         records = records[: args.first_n]
         print(f"Limiting to first {args.first_n} items (--first-n)")
 
-    # Check if evaluation already exists
-    if os.path.exists(args.evaluation):
+    # Check if evaluation already exists (skipped when --no-skip)
+    if (not args.no_skip) and os.path.exists(args.evaluation):
         print(f"Loading existing evaluation from {args.evaluation}")
         with open(args.evaluation, 'r') as f:
             evaluation_data = json.load(f)
             detailed_results = evaluation_data.get('detailed_results', [])
     else:
-        # ask GPT-4 to evaluate
-        detailed_results = []
-        conv_index = 0
-        
-        for i, record in enumerate(tqdm(records, desc="Evaluating")):
-            # Image content and gt: for caption use same composition as examiner/dyna_conv_v18
+        # ── Build a flat task list (record_idx, round_idx, image_content, prompt, gt, response, q_type, round_id) ──
+        tasks = []
+        for i, record in enumerate(records):
             if args.gt_type == 'caption':
                 image_info_str = _image_info_like_examiner(record)
                 if image_info_str is not None:
                     image_content = image_info_str
-                    gt_answer_per_record = image_info_str  # gt = image information (same as examiner)
+                    gt_per_record = image_info_str
                 else:
-                    # Fallback when record is not full VG/COCO case
                     if 'metadata' in record:
                         image_content = format_image_content_simple(record['metadata'])
                     else:
                         image_content = format_image_content_simple(record)
-                    gt_answer_per_record = image_content
+                    gt_per_record = image_content
             else:
-                # dyna: Image Contents = simple object list; gt = from conversation
                 if 'metadata' in record:
                     image_content = format_image_content_simple(record['metadata'])
                 else:
                     image_content = format_image_content_simple(record)
-            
-            for one_round_conv in record['conversations']:
-                # Get ground truth based on gt-type argument
-                if args.gt_type == 'dyna':
-                    gt_answer = one_round_conv['gt']
-                else:  # args.gt_type == 'caption'
-                    gt_answer = gt_answer_per_record
-                
-                input_text = template.format(
-                    image_content, 
-                    one_round_conv['prompt'], 
-                    gt_answer,
-                    one_round_conv['response']
-                )
-
-                max_retries = 5
-                timeout = 120
-                evaluation_text = None
-                
-                for attempt in range(max_retries):
-                    try:
-                        headers = {
-                            "Content-Type": "application/json"
-                        }
-                        # Only add Authorization header if API key is provided
-                        if api_key:
-                            headers["Authorization"] = f"Bearer {api_key}"
-                        
-                        payload = {
-                            "model": args.gpt_model,
-                            "messages": [
-                                {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
-                                {"role": "user", "content": input_text}
-                            ],
-                            "temperature": 0.0,
-                        }
-                        
-                        response = requests.post(api_url, headers=headers, json=payload, timeout=timeout)
-                        response.raise_for_status()
-                        
-                        result = response.json()
-                        evaluation_text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                        break
-                    except Exception as e:
-                        print(f"Error in evaluation (attempt {attempt + 1}/{max_retries}): {e}")
-                        if attempt < max_retries - 1:
-                            print('retrying...')
-                            time.sleep(10)
-                        else:
-                            print(f"Failed to get evaluation after {max_retries} attempts, skipping this item")
-                            break  # Break out of retry loop
-
-                if evaluation_text is None:
-                    continue  # Skip if all retries failed
-
-                # Parse score using LLM
-                score = parse_score_with_llm(api_url, api_key, evaluation_text, args.gpt_model, max_retries=max_retries, timeout=timeout)
-                
-                # Store detailed result
-                detailed_results.append({
+                gt_per_record = None
+            for j, one_round in enumerate(record.get('conversations', [])):
+                gt_answer = (one_round['gt'] if args.gt_type == 'dyna' else gt_per_record)
+                tasks.append({
                     'record_index': i,
-                    'round_id': one_round_conv.get('round_id', conv_index),
-                    'q_type': one_round_conv.get('q_type', 'unknown'),
-                    'prompt': one_round_conv['prompt'],
-                    'response': one_round_conv['response'],
+                    'round_idx_in_record': j,
+                    'round_id': one_round.get('round_id', j),
+                    'q_type': one_round.get('q_type', 'unknown'),
+                    'prompt': one_round.get('prompt', ''),
+                    'response': one_round.get('response', ''),
                     'gt': gt_answer,
-                    'evaluation': evaluation_text,
-                    'score': score,
-                    'has_hallucination': score < 3
+                    'image_content': image_content,
                 })
-                
-                if conv_index % 5 == 0:
-                    print(f"{conv_index} | Score: {score} | {evaluation_text[:100]}...", flush=True)
-                
-                conv_index += 1
-                time.sleep(0.1)
+
+        max_retries = 5
+        timeout = 120
+
+        def _grade_task(t):
+            input_text = template.format(t['image_content'], t['prompt'], t['gt'], t['response'])
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            evaluation_text = None
+            for attempt in range(max_retries):
+                try:
+                    payload = {
+                        "model": args.gpt_model,
+                        "messages": [
+                            {"role": "system", "content": "You are a helpful, impartial and objective judge that can accurately evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question."},
+                            {"role": "user", "content": input_text}
+                        ],
+                        "temperature": 0.0,
+                    }
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=timeout)
+                    response.raise_for_status()
+                    evaluation_text = response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                    break
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        time.sleep(min(2 ** attempt, 15))
+                    else:
+                        print(f"[mmhal] eval failed after {max_retries} attempts: {e}", flush=True)
+                        return None
+            if not evaluation_text:
+                return None
+            score = parse_score_with_llm(api_url, api_key, evaluation_text, args.gpt_model,
+                                         max_retries=max_retries, timeout=timeout)
+            return {
+                'record_index': t['record_index'],
+                'round_id': t['round_id'],
+                'q_type': t['q_type'],
+                'prompt': t['prompt'],
+                'response': t['response'],
+                'gt': t['gt'],
+                'evaluation': evaluation_text,
+                'score': score,
+                'has_hallucination': score < 3,
+                '_order_key': (t['record_index'], t['round_idx_in_record']),
+            }
+
+        n_workers = max(1, int(args.workers))
+        print(f"[mmhal] tasks={len(tasks)} workers={n_workers}", flush=True)
+        detailed_results = []
+        if n_workers == 1:
+            for t in tqdm(tasks, desc="Evaluating"):
+                r = _grade_task(t)
+                if r is not None:
+                    detailed_results.append(r)
+        else:
+            with ThreadPoolExecutor(max_workers=n_workers) as ex:
+                fut_to_t = {ex.submit(_grade_task, t): t for t in tasks}
+                for fut in tqdm(as_completed(fut_to_t), total=len(fut_to_t), desc="Evaluating"):
+                    try:
+                        r = fut.result()
+                    except Exception as e:
+                        print(f"[mmhal] task error: {e}", flush=True)
+                        r = None
+                    if r is not None:
+                        detailed_results.append(r)
+        # Sort to deterministic (record, round) order
+        detailed_results.sort(key=lambda r: r.pop('_order_key'))
 
     # Calculate aggregated metrics
     scores = [r['score'] for r in detailed_results]

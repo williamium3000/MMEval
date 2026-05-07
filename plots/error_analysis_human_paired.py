@@ -255,21 +255,11 @@ def rate_by_progress(rows, n_bins=N_BINS):
 # ---------------------------------------------------------------------------
 
 def main():
-    # Compare the SAME grader (MMHal) across two examiner settings -- v18
-    # (CEDI without conversation history fed to the examinee) vs v18conv
-    # (CEDI with full multi-turn history). Restricted to the 5 non-InternVL
-    # evaluatees that have MMHal output in both directories.
-    EXCLUDE_PREFIX = ("InternVL", "internvl")
-
-    def filter_non_internvl(rows):
-        return [r for r in rows if not r[0].startswith(EXCLUDE_PREFIX)]
-
-    v18_dir  = ["work_dirs/vg/final_run_v18_gpt4o_completed"]
-    conv_dir = ["work_dirs/vg/final_run_v18_gpt4o_conv_completed"]
     series = {
-        "MMHal -- no history":   filter_non_internvl(collect_mmhal(v18_dir,  "v18")),
-        "MMHal -- with history": filter_non_internvl(collect_mmhal(conv_dir, "v18conv")),
+        "CEDI": collect_pope(),
     }
+    human, human_files = collect_human()
+    series["Human$^\\dagger$"] = human
 
     # ---- Aggregate ----
     agg_qt   = {k: rate_by_qtype(v)    for k, v in series.items()}
@@ -307,16 +297,12 @@ def main():
     })
 
     palette = {
-        "MMHal -- no history":   "#D5E4F4",  # light blue fill
-        "MMHal -- with history": "#E4F0E0",  # light green fill
-    }
-    edge = {
-        "MMHal -- no history":   "#2F6FCC",  # dark blue
-        "MMHal -- with history": "#496F2C",  # dark green
+        "CEDI":             "#d9eeff",  # user theme (light blue)
+        "Human$^\\dagger$": "#d9f2d9",  # light green
     }
     markers = {
-        "MMHal -- no history":   "o",
-        "MMHal -- with history": "D",
+        "CEDI":             "D",
+        "Human$^\\dagger$": "^",
     }
     keys = list(series.keys())
 
@@ -338,15 +324,15 @@ def main():
             patch_artist=True, manage_ticks=False,
             showfliers=False, whis=1.5,
             medianprops=dict(color="black", linewidth=1.0),
-            boxprops=dict(facecolor=palette[k], edgecolor=edge[k],
-                          linewidth=0.9),
-            whiskerprops=dict(color=edge[k], linewidth=0.7),
-            capprops=dict(color=edge[k], linewidth=0.7),
+            boxprops=dict(facecolor=palette[k], edgecolor="black",
+                          linewidth=0.6),
+            whiskerprops=dict(color="black", linewidth=0.6),
+            capprops=dict(color="black", linewidth=0.6),
         )
         # legend handle
         axL.plot([], [], color=palette[k], marker="s", linestyle="none",
-                 markersize=7, markeredgecolor=edge[k],
-                 markeredgewidth=0.7, label=k)
+                 markersize=7, markeredgecolor="black",
+                 markeredgewidth=0.5, label=k)
         # overlay individual model points
         for pos, d in zip(positions, data):
             if not d:
@@ -364,17 +350,52 @@ def main():
     axL.legend(frameon=False, loc="upper left", ncol=1, handlelength=1.0,
                labelspacing=0.2)
 
-    # ---- Right: per-grader lines vs conversation progress ----
-    for k in keys:
-        centers, rates, _ = agg_prog[k]
-        axR.plot(centers * 100, rates * 100,
-                 marker=markers[k], color=edge[k],
-                 markerfacecolor=palette[k],
-                 markersize=4.0, linewidth=1.6, label=k,
-                 markeredgewidth=0.7)
+    # ---- Right: lines by progress (paired human-annotation comparison
+    # between standard CEDI and the long-context variant; same-model pair). ----
+    R_FILES = [
+        ("human -- no history",
+         "/raid/william/project/context-eval-mllm/work_dirs/human/vg/"
+         "final_run_v18_gpt4o_completed/opera-llava-1.5_cache_first50.json",
+         "#2F6FCC"),  # dark blue
+        ("human -- CEDI with history",
+         "/raid/william/project/context-eval-mllm/work_dirs/human/vg/"
+         "final_run_v18_gpt4o_conv_completed/opera-llava-1.5_cache_conversation-1.json",
+         "#496F2C"),  # dark green
+    ]
+
+    def progress_curve_count(path, n_bins=N_BINS):
+        """Mean halluc-spans-per-turn binned by conversation progress."""
+        d = json.load(open(path))
+        rows = []
+        for s in d:
+            convs = s.get("conversations") or []
+            if not convs: continue
+            mx = max((t.get("round_id") or 0) for t in convs) or 1
+            for t in convs:
+                rid = int(t.get("round_id") or 0)
+                rows.append((rid / mx, len(t.get("hallucination") or [])))
+        edges = np.linspace(0.0, 1.0, n_bins + 1)
+        centers = (edges[:-1] + edges[1:]) / 2
+        rates = []
+        for i in range(n_bins):
+            lo, hi = edges[i], edges[i + 1]
+            sub = [v for (p, v) in rows
+                   if (lo <= p <= hi if i == n_bins - 1 else lo <= p < hi)]
+            rates.append(np.mean(sub) if sub else np.nan)
+        return centers, np.array(rates)
+
+    for label, path, color in R_FILES:
+        c, r = progress_curve_count(path)
+        # r is mean hallucination spans per turn at this progress bin -- now
+        # plotted as raw count rather than scaled to a "%" so the unit is
+        # honest about what's being aggregated.
+        axR.plot(c * 100, r,
+                 marker="o", color=color,
+                 markersize=4.0, linewidth=1.6, label=label,
+                 markeredgecolor="black", markeredgewidth=0.4)
 
     axR.set_xlabel("Conversation progress (%)")
-    axR.set_ylabel("Hallucination rate (%)")
+    axR.set_ylabel("Hallucinations per turn")
     axR.set_title("(b) By conversation progress")
     axR.set_xlim(0, 100)
     axR.grid(linestyle=":", alpha=0.4)
@@ -384,6 +405,9 @@ def main():
     fig.tight_layout()
     fig.savefig(OUT_PDF, bbox_inches="tight")
     print(f"[pdf] wrote {OUT_PDF}")
+    print(f"[note] human series: "
+          + ", ".join(f.replace("_single_first50.json", "")
+                       .replace("_cache_first50.json", "") for f in human_files))
 
 
 if __name__ == "__main__":

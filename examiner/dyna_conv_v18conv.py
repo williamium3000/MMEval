@@ -704,12 +704,14 @@ class EvalSample:
                 # Validate context output
                 valid_contexts = []
                 for context in contexts:
-                    # Check if relevant_objects is a list of valid IDs
+                    # Check if relevant_objects is a non-empty list of valid IDs
                     relevant_objects = context.get("relevant_objects", [])
-                    if isinstance(relevant_objects, list) and all(isinstance(oid, (str, int)) for oid in relevant_objects):
+                    if (isinstance(relevant_objects, list)
+                        and len(relevant_objects) > 0
+                        and all(isinstance(oid, (str, int)) for oid in relevant_objects)):
                         valid_contexts.append(context)
                 if not valid_contexts:
-                    raise ValueError("Context parsing error: No valid relevant_objects list.")
+                    raise ValueError("Context parsing error: No valid (non-empty) relevant_objects list.")
                 break
             except Exception as e:
                 print(f"Context generation or parsing failed (attempt {attempt+1}/{max_retries}): {e}")

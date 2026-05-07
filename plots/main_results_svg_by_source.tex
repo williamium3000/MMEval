@@ -1,0 +1,69 @@
+% ===== SVG by-source GED + DELCON =====
+% Per-image GED and DELCON, partitioned by the underlying SVG source field
+% (COCO / VG / ADE20K), aggregated across each source. Three rows per VLM:
+% caption (single-turn caption examiner), baseline (ablation_baseline2,
+% dyna_conv.py max_rounds=10), CEDI (= our method; OS rows use the v19conv
+% transcripts, API rows use v19_api). Bolded values are the per-source-per-metric
+% best across the three rows for that VLM. Higher is better for both GED and
+% DELCON (examiner perspective: greater divergence from GT exposes more issues).
+
+\begin{table*}[t]
+\centering
+\tiny
+\caption{SVG main results by examiner scheme, broken out by source dataset (COCO / VG / ADE20K). Each cell pair reports per-image mean \textbf{GED} ($\uparrow$) and \textbf{DELCON} ($\uparrow$). OS rows use \texttt{v19conv} for the CEDI examiner; API rows use \texttt{v19\_api}. Bold = best examiner within the VLM block.}
+\label{tab:hallucination_stats}
+\begin{tabular}{@{}l|l|cc|cc|cc@{}}
+\toprule
+& & \multicolumn{2}{c|}{\textbf{COCO}} & \multicolumn{2}{c|}{\textbf{VG}} & \multicolumn{2}{c}{\textbf{ADE20K}} \\
+\textbf{Model} & \textbf{Examiner} & GED ($\uparrow$) & DELCON ($\uparrow$) & GED ($\uparrow$) & DELCON ($\uparrow$) & GED ($\uparrow$) & DELCON ($\uparrow$) \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{LLaVA-1.5}\\ \textbf{7B}}}
+  & caption  & 30.07 & 3.71 & 61.71 & 3.82 & 50.01 & 3.92 \\
+  & baseline & 52.38 & 3.97 & 76.67 & 4.10 & 72.72 & 4.17 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{91.06} & \textbf{4.17} & \textbf{116.26} & \textbf{4.30} & \textbf{126.37} & \textbf{4.71} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{InternVL2}\\ \textbf{8B}}}
+  & caption  & 46.44 & \textbf{3.99} & 71.12 & 4.09 & 62.65 & 4.15 \\
+  & baseline & 52.54 & 3.95 & 79.88 & 4.12 & 92.56 & 4.37 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{69.03} & \textbf{4.05} & \textbf{85.09} & \textbf{4.20} & \textbf{121.62} & \textbf{4.42} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{InternVL2.5}\\ \textbf{8B}}}
+  & caption  & 35.22 & 3.76 & 62.67 & 3.85 & 52.38 & 3.93 \\
+  & baseline & 52.85 & 3.97 & 74.21 & 4.04 & 70.97 & 4.17 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{78.59} & \textbf{4.12} & \textbf{92.62} & \textbf{4.26} & \textbf{108.31} & \textbf{4.47} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{Qwen2.5-VL-7B}\\ \textbf{Instruct}}}
+  & caption  & 41.02 & 3.90 & 66.18 & 4.01 & 57.09 & 4.06 \\
+  & baseline & 82.48 & 4.27 & 110.29 & 4.47 & 105.58 & 4.53 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{130.76} & \textbf{4.44} & \textbf{151.64} & \textbf{4.56} & \textbf{177.94} & \textbf{4.84} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{gemma-3-it}\\ \textbf{12B}}}
+  & caption  & 47.77 & 3.96 & 72.83 & 4.11 & 66.47 & 4.16 \\
+  & baseline & 86.27 & 4.35 & 100.40 & 4.14 & 119.75 & 4.65 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{144.33} & \textbf{4.52} & \textbf{161.89} & \textbf{4.76} & \textbf{207.25} & \textbf{5.45} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{GPT-4o}\\ }}
+  & caption  & 37.91 & 3.84 & 63.29 & 3.91 & 54.03 & 3.97 \\
+  & baseline & 55.07 & 4.01 & 82.52 & 4.20 & 72.63 & 4.23 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{60.53} & \textbf{4.03} & \textbf{83.91} & \textbf{4.26} & \textbf{82.80} & \textbf{4.34} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{GPT-5.4}\\ \textbf{mini}}}
+  & caption  & 46.63 & 3.94 & 69.46 & 4.04 & 61.40 & 4.11 \\
+  & baseline & 77.53 & 4.20 & 99.26 & 4.30 & 106.79 & 4.45 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{80.62} & \textbf{4.21} & \textbf{110.07} & \textbf{4.51} & \textbf{107.86} & \textbf{4.54} \\
+\midrule
+\multirow{3}{*}{\parbox{2.5cm}{\centering\textbf{GLM-5V}\\ \textbf{Turbo}}}
+  & caption  & 54.66 & 4.06 & 77.03 & 4.22 & 71.71 & 4.35 \\
+  & baseline & 122.13 & 4.45 & 92.00 & 3.99 & 153.93 & 4.91 \\
+\rowcolor[HTML]{E6F2FF}
+  \multicolumn{1}{l}{\cellcolor{white}} & CEDI & \textbf{163.14} & \textbf{4.65} & \textbf{186.30} & \textbf{5.15} & \textbf{202.03} & \textbf{5.01} \\
+\bottomrule
+\end{tabular}
+\end{table*}

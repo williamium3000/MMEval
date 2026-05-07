@@ -1,31 +1,31 @@
 series,q_type,hallucination_rate,n
-CEDI,regular,0.1351,10639
-CEDI,follow-up,0.1554,9882
-CEDI,adversarial,0.7715,10746
-CEDI,unanswerable,0.8381,3120
-Human$^\dagger$,regular,0.5959,636
-Human$^\dagger$,follow-up,0.6290,601
-Human$^\dagger$,adversarial,0.6236,712
-Human$^\dagger$,unanswerable,0.6653,245
+MMHal -- no history,regular,0.3884,10998
+MMHal -- no history,follow-up,0.5064,9829
+MMHal -- no history,adversarial,0.3590,11795
+MMHal -- no history,unanswerable,0.5642,4367
+MMHal -- with history,regular,0.3762,2961
+MMHal -- with history,follow-up,0.4595,2542
+MMHal -- with history,adversarial,0.5786,3265
+MMHal -- with history,unanswerable,0.6112,1209
 
 series,bin_center,hallucination_rate,n
-CEDI,0.050,0.1881,1547
-CEDI,0.150,0.2200,3659
-CEDI,0.250,0.4189,4273
-CEDI,0.350,0.5024,2888
-CEDI,0.450,0.4885,2616
-CEDI,0.550,0.4446,4447
-CEDI,0.650,0.4384,3298
-CEDI,0.750,0.4172,3018
-CEDI,0.850,0.3932,3703
-CEDI,0.950,0.4305,4938
-Human$^\dagger$,0.050,0.6095,105
-Human$^\dagger$,0.150,0.6486,222
-Human$^\dagger$,0.250,0.6145,249
-Human$^\dagger$,0.350,0.6196,184
-Human$^\dagger$,0.450,0.6158,190
-Human$^\dagger$,0.550,0.6303,284
-Human$^\dagger$,0.650,0.6415,212
-Human$^\dagger$,0.750,0.6398,186
-Human$^\dagger$,0.850,0.6114,229
-Human$^\dagger$,0.950,0.5946,333
+MMHal -- no history,0.050,0.4063,1420
+MMHal -- no history,0.150,0.4476,3874
+MMHal -- no history,0.250,0.4664,4235
+MMHal -- no history,0.350,0.4617,3130
+MMHal -- no history,0.450,0.4332,3022
+MMHal -- no history,0.550,0.4400,4959
+MMHal -- no history,0.650,0.4354,3654
+MMHal -- no history,0.750,0.4286,3094
+MMHal -- no history,0.850,0.4056,3967
+MMHal -- no history,0.950,0.3903,5634
+MMHal -- with history,0.050,0.3782,386
+MMHal -- with history,0.150,0.4238,1043
+MMHal -- with history,0.250,0.5062,1134
+MMHal -- with history,0.350,0.5348,847
+MMHal -- with history,0.450,0.5527,807
+MMHal -- with history,0.550,0.5126,1350
+MMHal -- with history,0.650,0.5076,983
+MMHal -- with history,0.750,0.4737,838
+MMHal -- with history,0.850,0.5089,1067
+MMHal -- with history,0.950,0.4717,1522

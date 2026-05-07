@@ -44,18 +44,33 @@ if __name__ == '__main__':
     parser.add_argument("--checkpoint_path", type=str, default="grader/HaELM/checkpoint")
     parser.add_argument('--outfile', type=str, default='output/vg/icl_haelm.json')
     parser.add_argument('--sample_num', type=int, default=100)
+    parser.add_argument('--stochastic', action='store_true',
+                        help='Use sampling (do_sample=True, num_beams=1) instead of beam-search greedy.')
+    parser.add_argument('--temperature', type=float, default=0.1)
+    parser.add_argument('--top_p', type=float, default=0.75)
+    parser.add_argument('--top_k', type=int, default=40)
 
     args = parser.parse_args()
 
     tokenizer = LlamaTokenizer.from_pretrained(args.llama_path)
     model = load_model(args, tokenizer)
 
-    generation_config = GenerationConfig(
-        temperature=0.1,
-        top_p=0.75,
-        top_k=40,
-        num_beams=4,
-    )
+    if args.stochastic:
+        generation_config = GenerationConfig(
+            do_sample=True,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            top_k=args.top_k,
+            num_beams=1,
+        )
+        print(f"[HaELM] stochastic mode: do_sample=True T={args.temperature} top_p={args.top_p} top_k={args.top_k}", flush=True)
+    else:
+        generation_config = GenerationConfig(
+            temperature=0.1,
+            top_p=0.75,
+            top_k=40,
+            num_beams=4,
+        )
 
     caption_index = 0
     # caption_info = json.load(open(args.caption, 'r'))
