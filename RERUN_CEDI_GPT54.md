@@ -14,7 +14,7 @@ conda available) to reproduce every CEDI cell in
 - **Dataset**: SVG, **500 samples** (`--dataset svg --num_samples 500`). The
   full sweep is identical for both variants.
 
-Companion file: **`tmp/rerun_cedi_gpt54_todo.csv`** — one row per
+Companion file: **`RERUN_CEDI_GPT54_TODO.csv`** (at repo root) — one row per
 `(round × variant × model)` job, with a `status` column you flip
 `todo → running → done` as you go.
 
