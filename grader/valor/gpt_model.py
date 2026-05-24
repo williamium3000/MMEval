@@ -9,12 +9,18 @@ import numpy as np
 import os
 from openai import OpenAI
 
-client = OpenAI()
+# Point at our local Qwen3 vLLM by default. Override via VALOR_OPENAI_BASE_URL / VALOR_OPENAI_API_KEY.
+_BASE_URL = os.environ.get("VALOR_OPENAI_BASE_URL", "http://localhost:8088/v1")
+_API_KEY  = os.environ.get("VALOR_OPENAI_API_KEY",  "william")
+client = OpenAI(base_url=_BASE_URL, api_key=_API_KEY)
+_DEFAULT_MODEL = os.environ.get("VALOR_MODEL", "Qwen/Qwen3-30B-A3B-Instruct-2507")
 
 start_marker = ["```json", "```python"]
 end_marker = "```"
 
-def llm(prompt, stop=["\n"], model="gpt-5"):
+def llm(prompt, stop=["\n"], model=None):
+    if model is None or model == "gpt-5":
+        model = _DEFAULT_MODEL
     success = False
     output = {}
     while not success:
