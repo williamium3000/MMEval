@@ -1,6 +1,5 @@
 # Local artifacts — not part of the reusable grader core.
 .cache/
-.cache_v2/
 predictions/
 samples/
 __pycache__/

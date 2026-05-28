@@ -11,7 +11,7 @@ Gold spans with empty / whitespace text are treated as "no hallucination".
 Non-substring gold spans (rare human typos) still count via char overlap.
 
 Usage:
-  python -m graders.agentic.evaluate --gold GOLD.json --pred PRED.json [--limit-images N]
+  python -m grader.agentic.evaluate --gold GOLD.json --pred PRED.json [--limit-images N]
 """
 
 import os
