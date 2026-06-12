@@ -112,6 +112,40 @@ You MUST only respond in the format as described above. DO NOT RESPOND WITH ANYT
 """
 
 
+_NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five",
+              6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
+
+
+def _num_word(n: int) -> str:
+    return _NUM_WORDS.get(n, str(n))
+
+
+def _build_context_prompt(image_info: str, num_contexts: int) -> str:
+    """Render CONTEXT_PROMPT with the number of contexts substituted.
+
+    The base template is written for 2 contexts; this rewrites the three
+    spots where "two"/"TWO" appears so it can ask for N. Replacements are
+    bounded — the literal substrings only appear in those three sentences.
+    """
+    word = _num_word(num_contexts)
+    plural_s = "" if num_contexts == 1 else "s"
+    dict_plural = "y" if num_contexts == 1 else "ies"
+    rendered = CONTEXT_PROMPT.format(image_info)
+    rendered = rendered.replace(
+        "Please generate two contexts",
+        f"Please generate {word} context{plural_s}",
+    )
+    rendered = rendered.replace(
+        "Return EXACTLY a JSON list with TWO dictionaries",
+        f"Return EXACTLY a JSON list with {word.upper()} dictionar{dict_plural}",
+    )
+    rendered = rendered.replace(
+        "The two contexts must be meaningfully different",
+        f"The {word} contexts must be meaningfully different",
+    )
+    return rendered
+
+
 # SELECT_CONTEXT_NODES_PROMPT_SYSTEM = \
 # """
 # you will be give an image and a context (background and goal). Then given image will be presented to you as a list of objects with attributes and relation of these objects. Each objects will be presented with specific coordinates locations in the image, represented as (x1, y1, x2, y2) with floating numbers ranging from 0 to 1. These values correspond to the top left x, top left y, bottom right x, and bottom right y.
@@ -585,40 +619,55 @@ class EvalSample:
         # All retries failed, raise error to skip this sample
         raise ValueError(f"LLM returned None after {max_retries} retries in ask_adversarial, skipping sample")
     
-    def generate_context(self, case, previous_context=None):
-        """Generate context(s) for the image.
-        
-        Args:
-            case: The sample case containing image data
-            previous_context: If provided, the first context that was already generated.
-                            This ensures the second context stays diverse.
-        
-        Returns:
-            List of contexts (either 2 new contexts, or 1 new context if previous_context provided)
-        """
-        image_info = format_case_vg(case) if args.dataset in ("vg", "svg") else format_case_coco(case)
-        
-        if previous_context is not None:
-            # Generate only the second context, using the first context for diversity
-            prompt = CONTEXT_PROMPT.format(image_info).strip()
-            prompt += f"\n\nIMPORTANT: The first context has already been generated as:\n{json.dumps(previous_context, indent=2)}\n\nPlease generate ONLY ONE additional context that is meaningfully different from the above. Return a JSON list with a single dictionary."
-            conversations = [
-                {"role": "system", "content": "You are an expert in generating realistic and diverse contexts for images. You excel at understanding the image content and predicting the possible scenarios and context in which the image might be situated."},
-                {"role": "user", "content": prompt}
-            ]
-            contexts = self.llm_chat_context.chat(conversations, parse_json)
-            # Ensure it returns a list
-            if isinstance(contexts, dict):
-                contexts = [contexts]
-        else:
-            # Generate both contexts from scratch
-            conversations = [
-                {"role": "system", "content": "You are an expert in generating realistic and diverse contexts for images. You excel at understanding the image content and predicting the possible scenarios and context in which the image might be situated."},
-                {"role": "user", "content": CONTEXT_PROMPT.format(image_info).strip()}
-            ]
-            contexts = self.llm_chat_context.chat(conversations, parse_json)
+    def generate_context(self, case, previous_contexts=None, num_contexts=None):
+        """Generate context(s) for the image, topping up to num_contexts total.
 
-        return contexts
+        Args:
+            case: The sample case containing image data.
+            previous_contexts: List of contexts already generated for this image.
+                If non-empty, the prompt names them and asks the LLM for only
+                the remaining slots.
+            num_contexts: Total contexts wanted for this image. Falls back to
+                the global args.num_contexts if not provided.
+
+        Returns:
+            List of new contexts (length = num_contexts - len(previous_contexts)).
+        """
+        n = num_contexts if num_contexts is not None else getattr(args, 'num_contexts', 2)
+        prev = list(previous_contexts or [])
+        num_to_generate = max(0, n - len(prev))
+        if num_to_generate == 0:
+            return []
+        image_info = format_case_vg(case) if args.dataset in ("vg", "svg") else format_case_coco(case)
+
+        if prev:
+            # Top-up path: render the base prompt asking for ALL N, then append
+            # an explicit list of the existing contexts and a directive that
+            # only the remaining num_to_generate dicts should be returned.
+            prompt = _build_context_prompt(image_info, n).strip()
+            extra_word = _num_word(num_to_generate)
+            extra_plural_s = "" if num_to_generate == 1 else "s"
+            extra_dict_plural = "y" if num_to_generate == 1 else "ies"
+            prompt += (
+                f"\n\nIMPORTANT: The following {len(prev)} context(s) have already been generated:\n"
+                f"{json.dumps(prev, indent=2)}\n\n"
+                f"Please generate ONLY {extra_word} additional context{extra_plural_s} that "
+                f"{'is' if num_to_generate == 1 else 'are'} meaningfully different from the above. "
+                f"Return a JSON list with {extra_word} dictionar{extra_dict_plural}."
+            )
+        else:
+            prompt = _build_context_prompt(image_info, n).strip()
+
+        conversations = [
+            {"role": "system", "content": "You are an expert in generating realistic and diverse contexts for images. You excel at understanding the image content and predicting the possible scenarios and context in which the image might be situated."},
+            {"role": "user", "content": prompt},
+        ]
+        contexts = self.llm_chat_context.chat(conversations, parse_json)
+        if isinstance(contexts, dict):
+            contexts = [contexts]
+        if not isinstance(contexts, list):
+            contexts = []
+        return contexts[:num_to_generate]
 
     def _parse_object_id(self, oid, retry_count=0, max_retries=3):
         """Parse an object id that may be an int, a numeric string, or a string like 'instance 0'.
@@ -696,26 +745,23 @@ class EvalSample:
             List of conversation results to save
         """
         to_save = []
-        
-        # Determine which contexts to generate
-        if prev_contexts is None:
-            # Generate both contexts from scratch
-            num_to_generate = 2
-            previous_context = None
-        elif len(prev_contexts) == 1:
-            # Generate only the second context, using first for diversity
-            num_to_generate = 1
-            previous_context = prev_contexts[0]
-        else:
-            # Both contexts already exist, nothing to do
-            print("Both contexts already cached, skipping this sample.")
+        target_n = getattr(args, 'num_contexts', 2)
+
+        prev_contexts = list(prev_contexts or [])
+        num_to_generate = target_n - len(prev_contexts)
+        if num_to_generate <= 0:
+            print(f"All {target_n} contexts already cached, skipping this sample.")
             return to_save
-        
+
         # Retry context generation and parsing up to 3 times
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                contexts = self.generate_context(self.case, previous_context=previous_context)
+                contexts = self.generate_context(
+                    self.case,
+                    previous_contexts=prev_contexts,
+                    num_contexts=target_n,
+                )
                 # Validate context output
                 valid_contexts = []
                 for context in contexts:
@@ -912,6 +958,11 @@ if __name__ == "__main__":
     parser.add_argument('--cache_file', type=str, default=None, 
                        help='Cache file to store/load intermediate results for resuming')
     parser.add_argument('--max_rounds', type=int, default=20)
+    parser.add_argument('--num_contexts', type=int, default=2,
+                       help='Number of contexts to generate per image. Default 2 matches v19conv. Used for the 1ctx/5ctx ablations.')
+    parser.add_argument('--examiner_model', type=str, default=None,
+                       help='Override the examiner LLM model name (used for both context-gen and conv). '
+                            'Defaults to the value of EXAMINER_MODEL env var, else gpt-5.4-2026-03-05.')
     parser.add_argument('--debug', action='store_true',
                        help='Enable debug mode: inject "what do you see" question after first query to verify image context')
     args = parser.parse_args()
@@ -929,8 +980,12 @@ if __name__ == "__main__":
     
     samples = load_data(args)
     
-    llm_chat_context = LLMChat(model_name="gpt-5")  # For context generation
-    llm_chat_conv = LLMChat(model_name="gpt-5.4-mini")  # For conversation generation
+    # Examiner model: single deployment used for both context-gen and conversation.
+    # Overridable via --examiner_model or EXAMINER_MODEL env. Defaults to the
+    # gpt-5.4 Azure deployment used in the gpt54 rerun.
+    examiner_model = args.examiner_model or os.environ.get("EXAMINER_MODEL") or "gpt-5.4-2026-03-05"
+    llm_chat_context = LLMChat(model_name=examiner_model)  # For context generation
+    llm_chat_conv = LLMChat(model_name=examiner_model)  # For conversation generation
     
     # Initialize cache and resume functionality
     to_save = []
@@ -945,23 +1000,24 @@ if __name__ == "__main__":
     
     print("starting conversation with model...")
     total_samples = len(samples)
-    total_conversations = total_samples * 2  # 2 conversations per sample
+    total_conversations = total_samples * args.num_contexts
     completed_conversations = len(cached_data)
-    
+
     for i, sample in enumerate(tqdm.tqdm(samples, desc="Processing samples")):
         sample_id = get_sample_id(sample)
-        
+
         # Check how many contexts are already cached for this sample
         cached_contexts = get_cached_contexts_for_sample(sample_id, cached_data)
         num_cached = len(cached_contexts)
-        
-        if num_cached >= 2:
-            print(f"Skipping sample {i+1}/{total_samples} (both conversations already processed): {sample_id}")
+        target_n = args.num_contexts
+
+        if num_cached >= target_n:
+            print(f"Skipping sample {i+1}/{total_samples} (all {target_n} conversations already processed): {sample_id}")
             continue
-        elif num_cached == 1:
-            print(f"Processing sample {i+1}/{total_samples}: {sample_id} (1/2 conversations cached, generating 2nd)")
+        elif num_cached > 0:
+            print(f"Processing sample {i+1}/{total_samples}: {sample_id} ({num_cached}/{target_n} conversations cached, generating {target_n - num_cached} more)")
         else:
-            print(f"Processing sample {i+1}/{total_samples}: {sample_id} (generating both conversations)")
+            print(f"Processing sample {i+1}/{total_samples}: {sample_id} (generating all {target_n} conversations)")
         
         try:
             eval_sample = EvalSample(sample, llm_chat_context, llm_chat_conv, eval_func)
@@ -985,7 +1041,7 @@ if __name__ == "__main__":
     with open(args.outfile, "w") as f:
         json.dump(to_save, f, indent=4)
     
-    print(f"Completed processing {completed_conversations}/{total_conversations} conversations ({completed_conversations//2}/{total_samples} samples)")
+    print(f"Completed processing {completed_conversations}/{total_conversations} conversations ({completed_conversations//max(args.num_contexts,1)}/{total_samples} samples)")
     print(f"Results saved to {args.outfile}")
     if args.cache_file:
         print(f"Cache saved to {args.cache_file}")
