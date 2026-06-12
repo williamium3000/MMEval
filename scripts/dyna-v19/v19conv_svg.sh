@@ -3,10 +3,14 @@ set -uo pipefail
 
 # v19conv on SVG-500 for the 6 main local models (opera handled separately by VG resume).
 # v19conv = conversation-aware variant of v19 (multi-turn examinee memory across rounds).
-# Examiner LLMs: gpt-5 (context) + gpt-4o (conversation) via uniapi.
+# Examiner LLMs: gpt-5.4-2026-03-05 for both context and conv (Azure modelhub).
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-    echo "ERROR: OPENAI_API_KEY not set." >&2
+if [[ -f .env ]]; then
+    set -a; source .env; set +a
+fi
+
+if [[ -z "${OPENAI_API_KEY:-}" && -z "${AZURE_OPENAI_API_KEY:-}" && -z "${AZURE_OPENAI_KEY:-}" ]]; then
+    echo "ERROR: neither OPENAI_API_KEY nor AZURE_OPENAI_API_KEY/AZURE_OPENAI_KEY is set." >&2
     exit 2
 fi
 if [[ -n "${HF_TOKEN:-}" ]]; then
@@ -19,11 +23,14 @@ export PYTHONPATH="./:infer:grader/easydetect"
 export PYTHONPATH="${PYTHONPATH}:/raid/william/project/context-eval-mllm/infer/LLaVA"
 export PYTHONPATH="${PYTHONPATH}:/raid/william/project/context-eval-mllm/infer/LLaVA/llava"
 
-NUM_SAMPLES=500
+NUM_SAMPLES="${NUM_SAMPLES:-500}"
 DATASET=svg
 RUN_FILE=examiner/dyna_conv_v19conv.py
 SAVE_DIR=work_dirs/svg/v19conv
 LOG_DIR=work_dirs/logs_v19conv_svg
+# Sample-level concurrency. Local VLM serialized through a lock; API calls
+# fan out. PARALLEL=4 is a memory-conservative default after OOM at 8.
+PARALLEL="${PARALLEL:-4}"
 
 mkdir -p "${SAVE_DIR}" "${LOG_DIR}"
 eval "$(conda shell.bash hook)"
@@ -48,7 +55,8 @@ run_job() {
         python "${RUN_FILE}" \
             --dataset "${DATASET}" --num_samples "${NUM_SAMPLES}" \
             --model_path "${model_path}" \
-            --outfile "${outfile}" --cache_file "${cache_file}"
+            --outfile "${outfile}" --cache_file "${cache_file}" \
+            --parallel "${PARALLEL}"
     ) >"${logfile}" 2>&1 &
 }
 
@@ -65,8 +73,8 @@ declare -A model_path=(
     [InternVL2-8B]="OpenGVLab/InternVL2-8B:work_dirs/envs/internvl"
     [InternVL2_5-8B]="OpenGVLab/InternVL2_5-8B:work_dirs/envs/internvl"
     [InternVL3-8B-Instruct]="OpenGVLab/InternVL3-8B-Instruct:work_dirs/envs/internvl"
-    [Qwen2.5-VL-7B-Instruct]="Qwen/Qwen2.5-VL-7B-Instruct:work_dirs/envs/qwenvl"
-    [gemma-3-12b-it]="google/gemma-3-12b-it:work_dirs/envs/gemma3"
+    [Qwen2.5-VL-7B-Instruct]="Qwen/Qwen2.5-VL-7B-Instruct:work_dirs/envs/qwenvl3"
+    [gemma-3-12b-it]="google/gemma-3-12b-it:work_dirs/envs/qwenvl3"
     # API examinees (route via gemini/<model> prefix; needs GEMINI_API_KEY+GEMINI_API_BASE)
     [gemini-2.5-flash]="gemini/gemini-2.5-flash:work_dirs/envs/qwenvl3"
 )

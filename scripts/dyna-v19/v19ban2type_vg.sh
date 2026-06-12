@@ -1,6 +1,11 @@
 #!/bin/bash
 set -uo pipefail
 
+# Auto-load .env from repo root if present (for HF_TOKEN, AZURE_*, GPT_EVAL_MODEL_NAME, ...).
+if [[ -f .env ]]; then
+    set -a; source .env; set +a
+fi
+
 # v19ban2type on VG-100 — only regular + follow-up question types (adversarial
 # and unanswerable are banned by SWITCH_PROMPTS).
 #
@@ -18,15 +23,15 @@ set -uo pipefail
 #   GEMINI_API_BASE    https://api.uniapi.io/gemini   (only needed for gemini)
 #   HF_TOKEN           HuggingFace token (needed for gated repos like gemma-3-12b-it)
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-    echo "ERROR: OPENAI_API_KEY not set." >&2
+if [[ -z "${OPENAI_API_KEY:-}" && -z "${AZURE_OPENAI_API_KEY:-}" && -z "${AZURE_OPENAI_KEY:-}" ]]; then
+    echo "ERROR: neither OPENAI_API_KEY nor AZURE_OPENAI_API_KEY/AZURE_OPENAI_KEY is set." >&2
     exit 2
 fi
 if [[ -n "${HF_TOKEN:-}" ]]; then
     export HUGGING_FACE_HUB_TOKEN="${HF_TOKEN}"
 fi
 # Make uniapi key fallback for gemini if user didn't set it explicitly
-export GEMINI_API_KEY="${GEMINI_API_KEY:-${OPENAI_API_KEY}}"
+export GEMINI_API_KEY="${GEMINI_API_KEY:-${OPENAI_API_KEY:-}}"
 export GEMINI_API_BASE="${GEMINI_API_BASE:-https://api.uniapi.io/gemini}"
 
 export PYTHONNOUSERSITE=1
@@ -35,11 +40,14 @@ export PYTHONPATH="./:infer:grader/easydetect"
 export PYTHONPATH="${PYTHONPATH}:/raid/william/project/context-eval-mllm/infer/LLaVA"
 export PYTHONPATH="${PYTHONPATH}:/raid/william/project/context-eval-mllm/infer/LLaVA/llava"
 
-NUM_SAMPLES=100
+NUM_SAMPLES="${NUM_SAMPLES:-100}"
 DATASET=vg
 RUN_FILE=examiner/dyna_conv_v19ban2type.py
 SAVE_DIR=work_dirs/vg/v19ban2type
 LOG_DIR=work_dirs/logs_v19ban2type_vg
+# Sample-level concurrency. Local VLM serializes through a lock; API calls
+# fan out. Override via env: PARALLEL=4 bash scripts/.../v19ban2type_vg.sh ...
+PARALLEL="${PARALLEL:-8}"
 
 mkdir -p "${SAVE_DIR}" "${LOG_DIR}"
 eval "$(conda shell.bash hook)"
@@ -68,7 +76,8 @@ run_job() {
         python "${RUN_FILE}" \
             --dataset "${DATASET}" --num_samples "${NUM_SAMPLES}" \
             --model_path "${model_path}" \
-            --outfile "${outfile}" --cache_file "${cache_file}"
+            --outfile "${outfile}" --cache_file "${cache_file}" \
+            --parallel "${PARALLEL}"
     ) >"${logfile}" 2>&1 &
 }
 
@@ -93,8 +102,8 @@ declare -A model_path=(
     [InternVL2-8B]="OpenGVLab/InternVL2-8B:work_dirs/envs/internvl"
     [InternVL2_5-8B]="OpenGVLab/InternVL2_5-8B:work_dirs/envs/internvl"
     [InternVL3-8B-Instruct]="OpenGVLab/InternVL3-8B-Instruct:work_dirs/envs/internvl"
-    [Qwen2.5-VL-7B-Instruct]="Qwen/Qwen2.5-VL-7B-Instruct:work_dirs/envs/qwenvl"
-    [gemma-3-12b-it]="google/gemma-3-12b-it:work_dirs/envs/gemma3"
+    [Qwen2.5-VL-7B-Instruct]="Qwen/Qwen2.5-VL-7B-Instruct:work_dirs/envs/qwenvl3"
+    [gemma-3-12b-it]="google/gemma-3-12b-it:work_dirs/envs/qwenvl3"
     [opera-llava-1.5]="/raid/william/project/context-eval-mllm/data/checkpoints/opera/llava-1.5:opera"
     [gemini-2.5-flash]="gemini/gemini-2.5-flash:work_dirs/envs/qwenvl3"
 )
