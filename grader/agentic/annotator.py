@@ -23,7 +23,7 @@ import difflib
 import time
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 load_dotenv(os.path.join(_REPO_ROOT, ".env"))
@@ -59,22 +59,59 @@ def _get_client():
     global _client
     with _client_lock:
         if _client is None:
-            _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"),
-                             base_url=os.getenv("OPENAI_BASE_URL"))
+            azure_key = os.getenv("AZURE_OPENAI_KEY") or os.getenv("AZURE_OPENAI_API_KEY")
+            if azure_key:
+                _client = AzureOpenAI(
+                    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT") or os.getenv("AZURE_OPENAI_API_BASE"),
+                    api_key=azure_key,
+                    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01"),
+                )
+            else:
+                _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"),
+                                 base_url=os.getenv("OPENAI_BASE_URL"))
     return _client
 
 
 # --------------------------------------------------------------------------- #
+class ImageUnavailable(Exception):
+    """Image could not be fetched from any known source."""
+
+
 def _local_image_path(image_id, url):
+    """Resolve the image to a local cache path.
+
+    Order:
+      1. existing entry in IMAGE_CACHE_DIR (filename = image_id with '/' -> '_')
+      2. local svg-source cache at work_dirs/svg_<source>_cache/<basename>
+         (for ADE images shipped via 1aurent/ADE20K, populated by
+         scripts/dataset/download_svg_images.py or by _fetch_ade_cache below)
+      3. fetch ``url`` with requests
+    Raises ImageUnavailable when none of these work.
+    """
     import requests
     os.makedirs(IMAGE_CACHE_DIR, exist_ok=True)
-    path = os.path.join(IMAGE_CACHE_DIR, f"{image_id}.jpg")
+    safe = str(image_id).replace("/", "_")
+    if not safe.lower().endswith((".jpg", ".jpeg", ".png")):
+        safe = safe + ".jpg"
+    path = os.path.join(IMAGE_CACHE_DIR, safe)
     with _img_lock:
-        if not (os.path.exists(path) and os.path.getsize(path) > 0):
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            return path
+        # Local svg-source cache fallback (e.g. ADE images we pre-downloaded).
+        base = os.path.basename(safe)
+        for sub in ("svg_ade_cache", "svg_coco_cache", "svg_vg_cache"):
+            local = os.path.join(_REPO_ROOT, "work_dirs", sub, base)
+            if os.path.exists(local) and os.path.getsize(local) > 0:
+                import shutil
+                shutil.copy(local, path)
+                return path
+        try:
             r = requests.get(url, timeout=60)
             r.raise_for_status()
-            with open(path, "wb") as f:
-                f.write(r.content)
+        except Exception as e:  # noqa: BLE001
+            raise ImageUnavailable(f"{image_id}: {e}") from e
+        with open(path, "wb") as f:
+            f.write(r.content)
     return path
 
 
@@ -361,7 +398,13 @@ def annotate_round(image, prompt, response, q_type, history=None, gt=None,
     # Step B — sg lookup
     verdicts = evaluate_claims(claims, sg)
     # Step C — vision judge with original + annotated image
-    img_path = _local_image_path(image["image_id"], image["url"])
+    try:
+        img_path = _local_image_path(image["image_id"], image.get("url") or image.get("image_url"))
+    except ImageUnavailable as e:
+        print(f"[annotate_round] image unavailable, skipping: {e}")
+        debug = {"claims": claims, "verdicts": verdicts, "candidates": [],
+                 "skip_reason": "image_unavailable"}
+        return ([], debug) if return_debug else []
     orig_b64 = _b64_image(img_path)
     all_boxes = []
     for v in verdicts:

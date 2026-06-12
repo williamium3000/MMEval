@@ -535,7 +535,7 @@ def print_metrics(hallucination_cap_dict, quiet=False):
         return metric_string
 
 
-def compute_chair_by_qtype(caps, total_synsets, group_by_image=False, api_url=None, api_key=None):
+def compute_chair_by_qtype(caps, total_synsets, group_by_image=False, api_url=None, api_key=None, model="Qwen3-30B-A3B-Instruct-2507"):
     """
     Compute CHAIR metrics grouped by question type.
     Processes each conversation round separately.
@@ -611,9 +611,9 @@ def compute_chair_by_qtype(caps, total_synsets, group_by_image=False, api_url=No
         
         # Extract negated objects using API first (for all conversations)
         # This sets api_error flag if it fails
-        if api_url and api_key:
+        if api_url:
             # Use full conversation context for API call
-            negated_words = extract_negated_objects_from_api(cap_eval, total_synsets, api_url, api_key)
+            negated_words = extract_negated_objects_from_api(cap_eval, total_synsets, api_url, api_key, model)
         else:
             # No API available, return empty set (no negative filtering)
             negated_words = set()
@@ -928,8 +928,8 @@ if __name__ == '__main__':
     
     if args.by_qtype:
         # Process conversations separately for question type analysis
-        chair_result = compute_chair_by_qtype(data, stemmed_object_dict, group_by_image=args.group_by_image, 
-                                             api_url=args.api_url, api_key=args.api_key)
+        chair_result = compute_chair_by_qtype(data, stemmed_object_dict, group_by_image=args.group_by_image,
+                                             api_url=args.api_url, api_key=args.api_key, model=args.model)
         print_metrics(chair_result)
         print_metrics_by_qtype(chair_result)
         save_hallucinated_words(args.cap_file, chair_result)
