@@ -58,9 +58,12 @@ def main():
     ax.set_ylabel(r"$\Delta$ vs.\ CEDI (%)")
     ax.tick_params(axis="x", which="both", length=0)
     ax.grid(False)
-    ax.margins(x=0.04)
-    ax.legend(frameon=False, loc="lower right", handlelength=1.0,
-              labelspacing=0.2, ncol=1)
+    ax.margins(x=0.04, y=0.10)
+    # Place legend above the plot to avoid overlap with bars (which all dip below 0).
+    ax.legend(frameon=False, loc="lower center",
+              bbox_to_anchor=(0.5, 1.02), ncol=3,
+              handlelength=1.0, labelspacing=0.2, columnspacing=1.2,
+              borderaxespad=0.0)
     fig.tight_layout()
     fig.savefig(OUT, bbox_inches="tight")
     print(f"[pdf] {OUT}")
