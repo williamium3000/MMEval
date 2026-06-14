@@ -59,17 +59,17 @@ def main():
 
     plt.rcParams.update({
         "font.family":     "serif",
-        "font.size":       6.5,
-        "axes.titlesize":  7.0,
-        "axes.labelsize":  6.5,
-        "xtick.labelsize": 6,
-        "ytick.labelsize": 5.5,
+        "font.size":       6.0,
+        "axes.titlesize":  6.0,
+        "axes.labelsize":  6.0,
+        "xtick.labelsize": 5.5,
+        "ytick.labelsize": 5.0,
         "pdf.fonttype":    42,
         "ps.fonttype":     42,
     })
 
-    nrow, ncol = 3, 4
-    fig, axes = plt.subplots(nrow, ncol, figsize=(5.5, 2.6),
+    nrow, ncol = 2, 6
+    fig, axes = plt.subplots(nrow, ncol, figsize=(5.5, 1.75),
                              constrained_layout=False)
     axes = axes.flatten()
 
@@ -115,11 +115,12 @@ def main():
                                 label=SHORT[m])
                for m in MODELS]
     axes[-1].legend(handles=handles, loc="center", frameon=False,
-                    fontsize=6.5, handlelength=1.2, labelspacing=0.4,
-                    title="VG", title_fontsize=7)
+                    fontsize=5.5, handlelength=1.0, labelspacing=0.25,
+                    title="VG", title_fontsize=6.0,
+                    borderaxespad=0.0)
 
-    fig.subplots_adjust(left=0.06, right=0.99, top=0.93, bottom=0.06,
-                        hspace=0.55, wspace=0.45)
+    fig.subplots_adjust(left=0.05, right=0.99, top=0.90, bottom=0.10,
+                        hspace=0.70, wspace=0.55)
     fig.savefig(OUT, bbox_inches="tight")
     print(f"[pdf] {OUT}")
 
