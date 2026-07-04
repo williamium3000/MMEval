@@ -87,7 +87,7 @@ def main():
 
         ax.set_xlim(-0.25, 1.25)
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(["v19", "ban2"], fontsize=5.5)
+        ax.set_xticklabels(["full", "ablated"], fontsize=5.5)
         ax.tick_params(axis="x", which="both", length=0, pad=1)
         ax.tick_params(axis="y", which="both", length=2, pad=1)
 
