@@ -55,6 +55,10 @@ def main():
     x = np.arange(len(MODELS))
     w = 0.38
 
+    # A thick colored horizontal line at 0 anchors CEDI as the reference,
+    # so the reader reads each bar as "distance from CEDI" rather than as
+    # "condition A vs condition B side-by-side".
+    CEDI_LINE = "#2F6FCC"  # ThemeDarkBlue
     for ax, (metric, schemes) in zip(axes, DATA.items()):
         v_node = [v if v is not None else np.nan for v in schemes["no node selector"]]
         v_nc   = [v if v is not None else np.nan for v in schemes["noncontext"]]
@@ -62,12 +66,18 @@ def main():
                facecolor=BLUE_FILL, edgecolor=BLUE_BORDER, linewidth=1.3)
         ax.bar(x + w / 2, v_nc, w, label="non-contextualized",
                facecolor=GREEN_FILL, edgecolor=GREEN_BORDER, linewidth=1.3)
-        ax.axhline(0, color="black", linewidth=0.8)
+        # CEDI reference: bold colored line + in-panel label.
+        ax.axhline(0, color=CEDI_LINE, linewidth=1.8, zorder=1)
+        ax.text(0.99, 0.02, "CEDI (full) baseline",
+                transform=ax.transAxes, ha="right", va="bottom",
+                color=CEDI_LINE, fontsize=9,
+                bbox=dict(facecolor="white", edgecolor="none",
+                          pad=1.5, alpha=0.85))
         ax.set_xticks(x)
         ax.set_xticklabels(MODELS, rotation=30, ha="right",
                            rotation_mode="anchor")
         ax.set_title(metric)
-        ax.set_ylabel(r"$\Delta$ vs. CEDI (\%)" if False else r"$\Delta$ vs. CEDI (%)")
+        ax.set_ylabel(r"$\Delta$ from CEDI (%)")
         ax.tick_params(axis="x", which="both", length=0)
         ax.grid(False)
         ax.margins(x=0.06)
