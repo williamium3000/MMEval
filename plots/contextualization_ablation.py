@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 OUT = "/raid/william/project/context-eval-mllm/nips_paper/fig/contextualization-ablation.pdf"
 
 MODELS = ["LLaVA-7B", "InternVL2-8B", "InternVL2.5-8B", "InternVL3-8B",
-          "Qwen2.5-7B", "gemma-3-12B"]
+          "Qwen2.5-7B"]
 
 METRICS = [
     ("CHAIR$_I$ ($\\uparrow$)",  "CHAIRi"),
