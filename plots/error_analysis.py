@@ -320,9 +320,49 @@ def main():
     }
     keys = list(series.keys())
 
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.5, 2.4))
+    fig, (axP, axL, axR) = plt.subplots(
+        1, 3, figsize=(10.5, 2.4),
+        gridspec_kw={"width_ratios": [1, 2, 2]},
+    )
 
-    # ---- Left: per-model boxplots by q_type ----
+    # ---- Panel (a): pie chart of total hallucinated-turn counts by q_type ----
+    # Uses the no-history CEDI series; each slice is the number of MMHal-flagged
+    # hallucinated turns of that question type.
+    pie_series_key = "MMHal -- no history"
+    counts_by_qt = {qt: 0 for qt in Q_TYPES}
+    for (_m, q, _p, h) in series[pie_series_key]:
+        if h and q in counts_by_qt:
+            counts_by_qt[q] += 1
+    pie_counts = [counts_by_qt[qt] for qt in Q_TYPES]
+    pie_colors = {
+        "regular":      "#D5E4F4",
+        "follow-up":    "#E4F0E0",
+        "adversarial":  "#F0D0C8",
+        "unanswerable": "#F6E4B8",
+    }
+    pie_edge = {
+        "regular":      "#2F6FCC",
+        "follow-up":    "#496F2C",
+        "adversarial":  "#B87474",
+        "unanswerable": "#B08830",
+    }
+    slices, texts, autotexts = axP.pie(
+        pie_counts,
+        labels=[qt.replace("-", "-\n") for qt in Q_TYPES],
+        colors=[pie_colors[qt] for qt in Q_TYPES],
+        wedgeprops=dict(edgecolor="white", linewidth=1.0),
+        autopct="%1.0f%%",
+        pctdistance=0.68,
+        textprops=dict(fontsize=7),
+    )
+    for wedge, qt in zip(slices, Q_TYPES):
+        wedge.set_edgecolor(pie_edge[qt])
+        wedge.set_linewidth(0.8)
+    for t in autotexts:
+        t.set_fontsize(6.5)
+    axP.set_title(f"(a) Hallucinations by q-type\n(n={sum(pie_counts)})")
+
+    # ---- Panel (b): per-model boxplots by q_type ----
     box_keys = list(keys)
     box_data = {k: per_model_rates_by_qtype(series[k]) for k in box_keys}
 
@@ -358,7 +398,7 @@ def main():
     axL.set_xticks(x)
     axL.set_xticklabels([q.replace("-", "-\n") for q in Q_TYPES])
     axL.set_ylabel("Hallucination rate (%)")
-    axL.set_title("(a) By question type")
+    axL.set_title("(b) By question type")
     axL.set_ylim(0, 105)
     axL.grid(axis="y", linestyle=":", alpha=0.4)
     axL.legend(frameon=False, loc="upper left", ncol=1, handlelength=1.0,
@@ -375,7 +415,7 @@ def main():
 
     axR.set_xlabel("Conversation progress (%)")
     axR.set_ylabel("Hallucination rate (%)")
-    axR.set_title("(b) By conversation progress")
+    axR.set_title("(c) By conversation progress")
     axR.set_xlim(0, 100)
     axR.grid(linestyle=":", alpha=0.4)
     axR.legend(frameon=False, loc="best", handlelength=1.6,
