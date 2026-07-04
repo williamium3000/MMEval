@@ -360,7 +360,7 @@ def main():
         wedge.set_linewidth(0.8)
     for t in autotexts:
         t.set_fontsize(6.5)
-    axP.set_title("(a) Hallucinations by q-type")
+    axP.set_title("(a) Hallucination count by question type")
 
     # ---- Panel (b): per-model boxplots by q_type ----
     box_keys = list(keys)
@@ -398,7 +398,7 @@ def main():
     axL.set_xticks(x)
     axL.set_xticklabels([q.replace("-", "-\n") for q in Q_TYPES])
     axL.set_ylabel("Hallucination rate (%)")
-    axL.set_title("(b) By question type")
+    axL.set_title("(b) Hallucination rate for each question type")
     axL.set_ylim(0, 105)
     axL.grid(axis="y", linestyle=":", alpha=0.4)
     axL.legend(frameon=False, loc="upper left", ncol=1, handlelength=1.0,
@@ -415,7 +415,7 @@ def main():
 
     axR.set_xlabel("Conversation progress (%)")
     axR.set_ylabel("Hallucination rate (%)")
-    axR.set_title("(c) By conversation progress")
+    axR.set_title("(c) Hallucination as conversation progresses")
     axR.set_xlim(0, 100)
     axR.grid(linestyle=":", alpha=0.4)
     axR.legend(frameon=False, loc="best", handlelength=1.6,
