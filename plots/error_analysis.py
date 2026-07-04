@@ -360,7 +360,7 @@ def main():
         wedge.set_linewidth(0.8)
     for t in autotexts:
         t.set_fontsize(6.5)
-    axP.set_title(f"(a) Hallucinations by q-type\n(n={sum(pie_counts)})")
+    axP.set_title("(a) Hallucinations by q-type")
 
     # ---- Panel (b): per-model boxplots by q_type ----
     box_keys = list(keys)
