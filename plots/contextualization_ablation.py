@@ -15,19 +15,29 @@ MODELS = ["LLaVA-7B", "InternVL2-8B", "InternVL2.5-8B", "InternVL3-8B",
           "Qwen2.5-7B", "gemma-3-12B"]
 
 # (Numbers as in tab:exam-contextualization. None = "---" in the table.)
+# Per-panel: (dict of {ablation: values}, y-axis unit label)
 DATA = {
-    "CHAIRi fix ($\\uparrow$)": {
-        "no node selector": [-2.8, -14.2, -13.5, -11.4, -6.0, -2.1],
-        "noncontext":       [-23.0, -33.3, -36.0, -20.8, -21.3, -17.0],
-    },
-    "Cov avg ($\\uparrow$)": {
-        "no node selector": [+2.8, -8.0, -9.3, -9.9, +7.0, +1.2],
-        "noncontext":       [-15.6, -26.4, -25.3, -14.5, -5.7, -11.0],
-    },
-    "GED ($\\uparrow$)": {
-        "no node selector": [-0.4, -11.1, -3.3, -9.1, -4.8, None],
-        "noncontext":       [-17.3, -23.7, -16.3, -13.5, -10.7, -10.1],
-    },
+    "CHAIR$_I$ ($\\uparrow$)": (
+        {
+            "no node selector": [-2.8, -14.2, -13.5, -11.4, -6.0, -2.1],
+            "noncontext":       [-23.0, -33.3, -36.0, -20.8, -21.3, -17.0],
+        },
+        r"$\Delta$ vs. CEDI (pp)",
+    ),
+    "Cov$_{\\mathrm{avg}}$ ($\\uparrow$)": (
+        {
+            "no node selector": [+2.8, -8.0, -9.3, -9.9, +7.0, +1.2],
+            "noncontext":       [-15.6, -26.4, -25.3, -14.5, -5.7, -11.0],
+        },
+        r"$\Delta$ vs. CEDI (pp)",
+    ),
+    "GED ($\\uparrow$)": (
+        {
+            "no node selector": [-0.4, -11.1, -3.3, -9.1, -4.8, None],
+            "noncontext":       [-17.3, -23.7, -16.3, -13.5, -10.7, -10.1],
+        },
+        r"$\Delta$ vs. CEDI (GED units)",
+    ),
 }
 
 BLUE_FILL    = "#D5E4F4"
@@ -55,7 +65,7 @@ def main():
     x = np.arange(len(MODELS))
     w = 0.38
 
-    for ax, (metric, schemes) in zip(axes, DATA.items()):
+    for ax, (metric, (schemes, ylabel)) in zip(axes, DATA.items()):
         v_node = [v if v is not None else np.nan for v in schemes["no node selector"]]
         v_nc   = [v if v is not None else np.nan for v in schemes["noncontext"]]
         ax.bar(x - w / 2, v_node, w, label="no node selector",
@@ -67,7 +77,7 @@ def main():
         ax.set_xticklabels(MODELS, rotation=30, ha="right",
                            rotation_mode="anchor")
         ax.set_title(metric)
-        ax.set_ylabel(r"$\Delta$ vs. CEDI (\%)" if False else r"$\Delta$ vs. CEDI (%)")
+        ax.set_ylabel(ylabel)
         ax.tick_params(axis="x", which="both", length=0)
         ax.grid(False)
         ax.margins(x=0.06)
