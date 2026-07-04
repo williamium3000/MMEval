@@ -16,7 +16,7 @@ MODELS = ["LLaVA-7B", "InternVL2-8B", "InternVL2.5-8B", "InternVL3-8B",
 
 # (Numbers as in tab:exam-contextualization. None = "---" in the table.)
 DATA = {
-    "CHAIRi fix ($\\uparrow$)": {
+    "CHAIRi ($\\uparrow$)": {
         "no node selector": [-2.8, -14.2, -13.5, -11.4, -6.0, -2.1],
         "noncontext":       [-23.0, -33.3, -36.0, -20.8, -21.3, -17.0],
     },
