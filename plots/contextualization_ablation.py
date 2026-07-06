@@ -3,8 +3,8 @@
 For each of 6 evaluatees and 3 metrics, plot absolute values under
 three conditions:
     * CEDI (full)             -- grey, the reference
-    * no node selector        -- blue family
-    * non-contextualized      -- green family
+    * w/o node selector       -- blue family
+    * w/o context             -- green family
 
 Deltas were previously plotted alone, which read as "condition A vs
 condition B" rather than "each ablation vs the CEDI anchor". Plotting
@@ -91,9 +91,9 @@ def main():
 
         ax.bar(x + offsets[0], cedi,   w, label="CEDI (full)",
                facecolor=GREY_FILL,  edgecolor=GREY_BORDER,  linewidth=1.2)
-        ax.bar(x + offsets[1], nonode, w, label="no node selector",
+        ax.bar(x + offsets[1], nonode, w, label="w/o node selector",
                facecolor=BLUE_FILL,  edgecolor=BLUE_BORDER,  linewidth=1.2)
-        ax.bar(x + offsets[2], nc,     w, label="non-contextualized",
+        ax.bar(x + offsets[2], nc,     w, label="w/o context",
                facecolor=GREEN_FILL, edgecolor=GREEN_BORDER, linewidth=1.2)
 
         ax.set_xticks(x)
