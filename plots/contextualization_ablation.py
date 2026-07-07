@@ -27,7 +27,7 @@ MODELS = ["LLaVA-7B", "InternVL2-8B", "InternVL2.5-8B", "InternVL3-8B",
 
 METRICS = [
     ("CHAIR$_I$ ($\\uparrow$)",  "CHAIRi"),
-    ("Cov$_{\\mathrm{avg}}$ ($\\uparrow$)", "Cov_avg"),
+    ("Cov ($\\uparrow$)", "Cov_avg"),
     ("GED ($\\uparrow$)",        "GED"),
 ]
 
@@ -104,8 +104,8 @@ def main():
         ax.grid(False)
         ax.margins(x=0.04, y=0.10)
 
-    axes[0].set_ylabel(r"CHAIR$_I$ (\%)".replace("\\%","%"))
-    axes[1].set_ylabel(r"Cov$_{\mathrm{avg}}$ (%)")
+    axes[0].set_ylabel(r"CHAIR$_I$ (%)")
+    axes[1].set_ylabel(r"Cov (%)")
     axes[2].set_ylabel(r"GED")
 
     axes[-1].legend(frameon=False, loc="center left",

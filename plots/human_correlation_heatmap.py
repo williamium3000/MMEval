@@ -30,7 +30,7 @@ MODELS = [
 ]
 
 # Left panel: hallucination-side graders
-HAL_GRADERS = [r"CHAIRi$_{v2}$", "mmhal", r"$n_{\mathrm{hall}}$",
+HAL_GRADERS = [r"CHAIR$_I$", "MMHal", r"$n_{\mathrm{hall}}$",
                r"GED$_{\mathrm{hal}}$"]
 HAL_RHO = np.array([
     # CHAIRi_v2   mmhal    n_hall_obj   GED_hal

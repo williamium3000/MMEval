@@ -16,11 +16,11 @@ MODELS = [
 ]
 # Values transcribed from the previous figure (per metric, per model).
 DATA = {
-    "CHAIRi fix ($\\uparrow$)": {
+    "CHAIR$_I$ ($\\uparrow$)": {
         "2": [0.512, 0.541, 0.488, 0.482, 0.520],
         "5": [0.578, 0.602, 0.555, 0.543, 0.612],
     },
-    "Cov avg ($\\uparrow$)": {
+    "Cov ($\\uparrow$)": {
         "2": [0.362, 0.443, 0.413, 0.422, 0.413],
         "5": [0.542, 0.610, 0.583, 0.578, 0.626],
     },

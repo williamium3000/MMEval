@@ -10,8 +10,8 @@ OUT = "/raid/william/project/context-eval-mllm/nips_paper/fig/multiround-ablatio
 MODELS = ["LLaVA-7B", "InternVL2-8B", "InternVL2.5-8B", "InternVL3-8B",
           "Qwen2.5-7B", "gemma-3-12B"]
 DATA = {
-    "CHAIRi fix":   [-15.4, -39.6, -35.9, -36.3, -39.7, -31.6],
-    "Cov avg":      [-72.8, -74.3, -70.8, -73.8, -62.3, -75.3],
+    "CHAIR$_I$":   [-15.4, -39.6, -35.9, -36.3, -39.7, -31.6],
+    "Cov":      [-72.8, -74.3, -70.8, -73.8, -62.3, -75.3],
     "GED":          [-26.1, -34.8, -24.0, -27.5, -29.8, -26.2],
 }
 
@@ -43,8 +43,8 @@ def main():
     w = 0.27
 
     palette = [
-        ("CHAIRi fix", BLUE_FILL,  BLUE_BORDER),
-        ("Cov avg",    GREEN_FILL, GREEN_BORDER),
+        ("CHAIR$_I$", BLUE_FILL,  BLUE_BORDER),
+        ("Cov",    GREEN_FILL, GREEN_BORDER),
         ("GED",        PINK_FILL,  PINK_BORDER),
     ]
     offsets = np.linspace(-1, 1, 3) * w
