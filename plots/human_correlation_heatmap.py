@@ -30,14 +30,14 @@ MODELS = [
 ]
 
 # Left panel: hallucination-side graders
-HAL_GRADERS = [r"CHAIR$_I$", "MMHal", r"$n_{\mathrm{hall}}$",
+HAL_GRADERS = [r"CHAIR$_I$", r"CHAIR $n_{\mathrm{hall}}$", "MMHal",
                r"GED$_{\mathrm{hal}}$"]
 HAL_RHO = np.array([
-    # CHAIRi_v2   mmhal    n_hall_obj   GED_hal
-    [-0.048,      0.268,   0.055,      0.322],   # InternVL3
-    [ 0.045,     -0.024,   0.318,      0.328],   # LLaVA
-    [-0.290,      0.205, -0.029,      0.322],   # Opera
-    [-0.317,      0.332,  -0.241,      0.220],   # Qwen3-VL
+    # CHAIR_I   CHAIR n_hall   mmhal    GED_hal
+    [-0.048,    0.055,          0.268,   0.322],   # InternVL3
+    [ 0.045,    0.318,         -0.024,   0.328],   # LLaVA
+    [-0.290,   -0.029,          0.205,   0.322],   # Opera
+    [-0.317,   -0.241,          0.332,   0.220],   # Qwen3-VL
 ])
 
 def render_panel(ax, data, col_labels, row_labels, cmap, norm,
