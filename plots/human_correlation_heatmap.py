@@ -30,7 +30,9 @@ MODELS = [
 ]
 
 # Left panel: hallucination-side graders
-HAL_GRADERS = [r"CHAIR$_I$", r"CHAIR $n_{\mathrm{hall}}$", "MMHal",
+HAL_GRADERS = [r"CHAIR$_I$",
+               "CHAIR\n" + r"$n_{\mathrm{hall}}$",
+               "MMHal",
                r"GED$_{\mathrm{hal}}$"]
 HAL_RHO = np.array([
     # CHAIR_I   CHAIR n_hall   mmhal    GED_hal
@@ -116,8 +118,6 @@ def main():
     cax = fig.add_axes([0.20, -0.18, 0.65, 0.06])
     cb = fig.colorbar(ax.images[0], cax=cax, orientation="horizontal",
                       ticks=[-vmax, 0, vmax])
-    cb.set_label(r"per-image Pearson $\rho$ vs.\ human hall.\ count",
-                 fontsize=6.5, labelpad=2)
     cb.ax.tick_params(labelsize=6, length=2)
 
     fig.savefig(OUT, bbox_inches="tight")
