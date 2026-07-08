@@ -27,7 +27,7 @@ MODELS = ["LLaVA-7B", "InternVL2-8B", "InternVL2.5-8B", "InternVL3-8B",
 
 METRICS = [
     ("CHAIR$_I$ ($\\uparrow$)",  "CHAIRi"),
-    ("Cov.\\ ($\\uparrow$)", "Cov_avg"),
+    ("Cov. ($\\uparrow$)", "Cov_avg"),
     ("GED ($\\uparrow$)",        "GED"),
 ]
 
