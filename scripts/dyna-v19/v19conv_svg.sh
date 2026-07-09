@@ -73,8 +73,11 @@ declare -A model_path=(
     [InternVL2-8B]="OpenGVLab/InternVL2-8B:work_dirs/envs/internvl"
     [InternVL2_5-8B]="OpenGVLab/InternVL2_5-8B:work_dirs/envs/internvl"
     [InternVL3-8B-Instruct]="OpenGVLab/InternVL3-8B-Instruct:work_dirs/envs/internvl"
+    [Qwen2.5-VL-3B-Instruct]="Qwen/Qwen2.5-VL-3B-Instruct:work_dirs/envs/qwenvl3"
     [Qwen2.5-VL-7B-Instruct]="Qwen/Qwen2.5-VL-7B-Instruct:work_dirs/envs/qwenvl3"
+    [Qwen2.5-VL-32B-Instruct]="Qwen/Qwen2.5-VL-32B-Instruct:work_dirs/envs/qwenvl3"
     [gemma-3-12b-it]="google/gemma-3-12b-it:work_dirs/envs/qwenvl3"
+    [opera-llava-1.5]="/raid/william/project/context-eval-mllm/data/checkpoints/opera/llava-1.5:opera"
     # API examinees (route via gemini/<model> prefix; needs GEMINI_API_KEY+GEMINI_API_BASE)
     [gemini-2.5-flash]="gemini/gemini-2.5-flash:work_dirs/envs/qwenvl3"
 )
