@@ -50,6 +50,15 @@ run_job() {
             fi
         fi
         conda activate "${conda_env}"
+        # opera env needs OPERA's forked transformers-4.29.2 (adds
+        # opera_decoding + related kwargs to GenerationMixin.generate).
+        # The vanilla env install pth is broken; we cloned OPERA's source
+        # to /raid/icy/iris/opera_deps/OPERA-src and installed editably.
+        # PYTHONNOUSERSITE=1 disables .pth processing, so prepend the real
+        # src dir directly to PYTHONPATH for the opera env only.
+        if [[ "${conda_env}" == "opera" ]]; then
+            export PYTHONPATH="/raid/icy/iris/opera_deps/OPERA-src/transformers-4.29.2/src:${PYTHONPATH}"
+        fi
         export CUDA_VISIBLE_DEVICES="${gpu_id}"
         echo "[$(date +'%H:%M:%S')] Launching ${name} on GPU ${gpu_id} env=${conda_env}"
         python "${RUN_FILE}" \
