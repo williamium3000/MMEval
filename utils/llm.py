@@ -220,8 +220,13 @@ class LLMChat:
         kwargs = dict(kwargs)
         # Pass via extra_body so it tunnels through OpenAI-compatible proxies
         # that don't whitelist reasoning_effort as a top-level kwarg.
+        # Use 'low' instead of 'minimal' — gpt-5's original 'minimal' is
+        # rejected by some newer variants like gpt-5.4-2026-03-05 which only
+        # accept {none, low, medium, high, xhigh}. 'low' is accepted by every
+        # reasoning model we route through (real OpenAI + Azure) and still
+        # collapses per-call latency close to non-reasoning cost.
         eb = dict(kwargs.get("extra_body") or {})
-        eb.setdefault("reasoning_effort", "minimal")
+        eb.setdefault("reasoning_effort", "low")
         kwargs["extra_body"] = eb
         return kwargs
 
