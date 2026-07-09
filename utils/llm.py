@@ -120,10 +120,34 @@ class LLMChat:
         self.patience = patience
         self.model = model_name
         self.client = None
-        
-        if os.getenv("OPENAI_API_KEY"):
-            base_url = os.getenv("OPENAI_BASE_URL")
-            self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=base_url if base_url else None)
+
+        # Per-model routing override: reasoning-heavy models like gpt-5 can be
+        # pointed at a different endpoint (usually direct OpenAI) via
+        # GPT5_OPENAI_API_KEY / GPT5_OPENAI_BASE_URL / GPT5_OPENAI_HOST_HEADER,
+        # while everything else keeps flowing through the generic OPENAI_*
+        # variables (which typically point at a proxy like uniapi).
+        model_lc = (model_name or "").lower()
+        prefix = None
+        if model_lc.startswith("gpt-5") and os.getenv("GPT5_OPENAI_API_KEY"):
+            prefix = "GPT5_"
+
+        def _env(name):
+            if prefix is not None:
+                v = os.getenv(f"{prefix}{name}")
+                if v is not None:
+                    return v
+            return os.getenv(name)
+
+        if _env("OPENAI_API_KEY"):
+            base_url = _env("OPENAI_BASE_URL")
+            # Optional Host header for routing through reverse-proxied Tailscale endpoints.
+            host = _env("OPENAI_HOST_HEADER")
+            headers = {"Host": host} if host else None
+            self.client = OpenAI(
+                api_key=_env("OPENAI_API_KEY"),
+                base_url=base_url if base_url else None,
+                default_headers=headers,
+            )
         
         if os.getenv("AZURE_OPENAI_KEY"):
             self.client = AzureOpenAI(
