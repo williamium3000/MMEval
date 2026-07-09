@@ -668,9 +668,14 @@ class EvalSample:
                 # Validate context output
                 valid_contexts = []
                 for context in contexts:
-                    # Check if relevant_objects is a list of valid IDs
+                    # Check if relevant_objects is a non-empty list of valid IDs.
+                    # An empty list would leave the ban2type loop with no round-1
+                    # question to ask (type 1 requires nodes, and adversarial /
+                    # unanswerable get coerced to type 1 in ban2type) and would
+                    # spin forever, so we force a retry.
                     relevant_objects = context.get("relevant_objects", [])
-                    if isinstance(relevant_objects, list) and all(isinstance(oid, (str, int)) for oid in relevant_objects):
+                    if (isinstance(relevant_objects, list) and len(relevant_objects) > 0
+                            and all(isinstance(oid, (str, int)) for oid in relevant_objects)):
                         valid_contexts.append(context)
                 if not valid_contexts:
                     raise ValueError("Context parsing error: No valid relevant_objects list.")

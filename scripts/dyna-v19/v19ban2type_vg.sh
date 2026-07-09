@@ -76,8 +76,7 @@ run_job() {
         python "${RUN_FILE}" \
             --dataset "${DATASET}" --num_samples "${NUM_SAMPLES}" \
             --model_path "${model_path}" \
-            --outfile "${outfile}" --cache_file "${cache_file}" \
-            --parallel "${PARALLEL}"
+            --outfile "${outfile}" --cache_file "${cache_file}"
     ) >"${logfile}" 2>&1 &
 }
 
