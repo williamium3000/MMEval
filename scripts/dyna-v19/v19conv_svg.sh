@@ -87,6 +87,8 @@ declare -A model_path=(
     [Qwen2.5-VL-32B-Instruct]="Qwen/Qwen2.5-VL-32B-Instruct:work_dirs/envs/qwenvl3"
     [gemma-3-12b-it]="google/gemma-3-12b-it:work_dirs/envs/qwenvl3"
     [opera-llava-1.5]="/raid/william/project/context-eval-mllm/data/checkpoints/opera/llava-1.5:opera"
+    [idefics2-8b]="HuggingFaceM4/idefics2-8b:work_dirs/envs/phi3v"
+    [idefics2-8b-lpoi]="/raid/william/project/context-eval-mllm/data/checkpoints/idefics2-8b-lpoi-list5-10k/final:work_dirs/envs/phi3v"
     # API examinees (route via gemini/<model> prefix; needs GEMINI_API_KEY+GEMINI_API_BASE)
     [gemini-2.5-flash]="gemini/gemini-2.5-flash:work_dirs/envs/qwenvl3"
 )

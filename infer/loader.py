@@ -358,6 +358,21 @@ def load_model(args):
         processor = AutoProcessor.from_pretrained(model_name, do_image_splitting=False)
         model.load_adapter(args.model_path)
         return partial(eval_model_lpoi, model=model, processor=processor)
+    elif "idefics2" in args.model_path:
+        # Vanilla idefics2 (no LPOI adapter) — reuses infer_lpoi.eval_model
+        # since the prompt/decode path is identical; the only difference vs the
+        # 'lpoi' branch above is that no adapter is loaded.
+        from .infer_lpoi import eval_model as eval_model_idefics2
+        from transformers import AutoModelForVision2Seq, AutoProcessor
+        model_name = args.model_path
+        model = AutoModelForVision2Seq.from_pretrained(
+            model_name,
+            load_in_8bit=False,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+        )
+        processor = AutoProcessor.from_pretrained(model_name, do_image_splitting=False)
+        return partial(eval_model_idefics2, model=model, processor=processor)
     elif "LLaVA-RLHF" in args.model_path:
         from .infer_llava_rlhf import eval_model as eval_model_llava_rlhf
         from .infer_llava_rlhf import load_pretrained_model
