@@ -324,7 +324,11 @@ def parse_scene_graph_string(s):
         elif len(parts) == 1:
             triplets.append((parts[0],))
         else:
-            raise ValueError(f"Unexpected format: ({match})")
+            # Malformed triplet from LLM parser (e.g., 2 or 4+ parts); skip
+            # rather than fail the whole run, since a small fraction of
+            # rounds is expected to produce noisy SG output.
+            print(f"[warn] skipping malformed triplet: ({match})")
+            continue
     return triplets
 
 

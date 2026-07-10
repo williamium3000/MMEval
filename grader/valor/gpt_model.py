@@ -10,9 +10,13 @@ import os
 from openai import OpenAI
 
 # Point at our local Qwen3 vLLM by default. Override via VALOR_OPENAI_BASE_URL / VALOR_OPENAI_API_KEY.
+# Optional VALOR_OPENAI_HOST env var sets the HTTP Host header so we can route
+# through a reverse-proxied Tailscale endpoint (upstream matches on Host).
 _BASE_URL = os.environ.get("VALOR_OPENAI_BASE_URL", "http://localhost:8088/v1")
 _API_KEY  = os.environ.get("VALOR_OPENAI_API_KEY",  "william")
-client = OpenAI(base_url=_BASE_URL, api_key=_API_KEY)
+_HOST_HEADER = os.environ.get("VALOR_OPENAI_HOST")
+_headers = {"Host": _HOST_HEADER} if _HOST_HEADER else None
+client = OpenAI(base_url=_BASE_URL, api_key=_API_KEY, default_headers=_headers)
 _DEFAULT_MODEL = os.environ.get("VALOR_MODEL", "Qwen/Qwen3-30B-A3B-Instruct-2507")
 
 start_marker = ["```json", "```python"]

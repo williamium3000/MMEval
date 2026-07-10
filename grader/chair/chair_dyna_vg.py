@@ -107,6 +107,10 @@ Important:
             # Only add Authorization header if API key is provided
             if api_key:
                 headers["Authorization"] = f"Bearer {api_key}"
+            # Optional Host header for routing through reverse-proxied Tailscale endpoints.
+            _host_hdr = os.environ.get("CHAIR_API_HOST_HEADER") or os.environ.get("REMOTE_API_HOST_HEADER")
+            if _host_hdr:
+                headers["Host"] = _host_hdr
             
             payload = {
                 "model": model,
