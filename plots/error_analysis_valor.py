@@ -38,7 +38,8 @@ from error_analysis import (
 
 
 VALOR_PT_DIR    = os.path.join(REPO, "tmp/valor_pt")
-OUT_MAIN_PDF    = os.path.join(REPO, "nips_paper/fig/error_analysis_valor.pdf")
+OUT_PIE_PDF     = os.path.join(REPO, "nips_paper/fig/error_analysis_valor_pie.pdf")
+OUT_LINE_PDF    = os.path.join(REPO, "nips_paper/fig/error_analysis_valor_progress.pdf")
 OUT_BOX_PDF     = os.path.join(REPO, "nips_paper/fig/history_valor_boxplot.pdf")
 
 N_BINS = 10
@@ -177,21 +178,11 @@ SERIES_EDGE  = {"no history": "#2F6FCC", "with history": "#496F2C"}
 SERIES_MARK  = {"no history": "o",       "with history": "D"}
 
 
-def plot_main(no_valor, wi_valor, no_mmhal, wi_mmhal, out_pdf):
-    """Two panels:
-    (a) pie of hallucinated-turn share by q_type (VALOR unfaithful on
-        no-history, since MMHal + VALOR share the same distribution
-        story).
-    (b) mean per-turn hallucination rate vs conversation progress,
-        averaging the two per-turn signals (MMHal has_hallucination
-        and VALOR 1-faith_i)."""
-    fig, (axP, axR) = plt.subplots(
-        1, 2, figsize=(7.5, 2.4),
-        gridspec_kw={"width_ratios": [1, 2]},
-    )
-
+def plot_pie(no_rows, out_pdf):
+    """Standalone pie: hallucinated-turn share by q_type on no-history."""
+    fig, axP = plt.subplots(figsize=(2.6, 2.4))
     counts = {qt: 0 for qt in Q_TYPES}
-    for (_m, q, _p, h) in no_valor:
+    for (_m, q, _p, h) in no_rows:
         if h > 0 and q in counts:
             counts[q] += 1
     slices, _, autotexts = axP.pie(
@@ -200,35 +191,36 @@ def plot_main(no_valor, wi_valor, no_mmhal, wi_mmhal, out_pdf):
         colors=[PIE_COLORS[qt] for qt in Q_TYPES],
         wedgeprops=dict(edgecolor="white", linewidth=1.0),
         autopct="%1.0f%%", pctdistance=0.68,
-        textprops=dict(fontsize=7),
+        textprops=dict(fontsize=8),
     )
     for wedge, qt in zip(slices, Q_TYPES):
         wedge.set_edgecolor(PIE_EDGE[qt])
         wedge.set_linewidth(0.8)
     for t in autotexts:
-        t.set_fontsize(6.5)
-    axP.set_title("(a) Hallucination count by question type")
+        t.set_fontsize(7)
+    fig.tight_layout()
+    fig.savefig(out_pdf, bbox_inches="tight")
+    print(f"[pdf] wrote {out_pdf}")
+    plt.close(fig)
 
-    for label, valor_rows, mmhal_rows in [
-        ("no history",   no_valor, no_mmhal),
-        ("with history", wi_valor, wi_mmhal),
-    ]:
-        centers, rate_v = rate_by_progress_per_model(valor_rows)
-        _,       rate_m = rate_by_progress_per_model(mmhal_rows)
-        combined = (rate_v + rate_m) / 2
-        axR.plot(centers * 100, combined * 100,
+
+def plot_line(no_rows, wi_rows, out_pdf):
+    """Standalone line plot: mean per-turn VALOR 1-faith_i rate vs
+    conversation progress. Per-model equal-weight averaging."""
+    fig, axR = plt.subplots(figsize=(4.6, 2.4))
+    for label, rows in [("no history", no_rows), ("with history", wi_rows)]:
+        centers, rates = rate_by_progress_per_model(rows)
+        axR.plot(centers * 100, rates * 100,
                  marker=SERIES_MARK[label], color=SERIES_EDGE[label],
                  markerfacecolor=SERIES_COLOR[label],
                  markersize=4.0, linewidth=1.6, label=label,
                  markeredgewidth=0.7)
     axR.set_xlabel("Conversation progress (%)")
-    axR.set_ylabel("Per-turn hallucination rate (%)")
-    axR.set_title("(b) Hallucination as conversation progresses")
+    axR.set_ylabel("VALOR $1{-}$faith$_i$ (%)")
     axR.set_xlim(0, 100)
     axR.grid(linestyle=":", alpha=0.4)
     axR.legend(frameon=False, loc="best", handlelength=1.6,
                labelspacing=0.25)
-
     fig.tight_layout()
     fig.savefig(out_pdf, bbox_inches="tight")
     print(f"[pdf] wrote {out_pdf}")
@@ -284,37 +276,16 @@ def plot_boxplot(no_rows, wi_rows, out_pdf):
 
 
 def main():
-    # 5-model VALOR data (box plot uses full 5-model set on the paired
-    # sources that already have per-turn VALOR outputs)
-    no_valor_5, _ = _collect_valor(NO_HIST, "VALOR no-hist (5-model)")
-    wi_valor_5, _ = _collect_valor(WI_HIST, "VALOR w-hist  (5-model)")
+    # 5-model VALOR data for both the pie, the line, and the box plot.
+    no_valor, _ = _collect_valor(NO_HIST, "VALOR no-hist (5-model)")
+    wi_valor, _ = _collect_valor(WI_HIST, "VALOR w-hist  (5-model)")
 
-    # Combined-metric panel needs same source for both metrics per model.
-    # MMHal is per-turn on v18/v18conv for all 5 models, but per-turn
-    # VALOR on v18/v18conv only exists for the 3 non-SVG evaluatees.
-    # Intersect.
-    combo_models = {
-        "InternVL2-8B":     "InternVL2-8B",
-        "InternVL2_5-8B":   "InternVL2_5-8B",
-        "gemma-3-12b-it":   "gemma-3-12b-it",
-    }
-    v18_root  = "work_dirs/vg/final_run_v18_gpt4o_completed"
-    conv_root = "work_dirs/vg/final_run_v18_gpt4o_conv_completed"
-    no_mmhal, _ = _collect_mmhal(combo_models, v18_root,  "MMHal no-hist")
-    wi_mmhal, _ = _collect_mmhal(combo_models, conv_root, "MMHal w-hist")
+    plot_pie(no_valor, OUT_PIE_PDF)
+    plot_line(no_valor, wi_valor, OUT_LINE_PDF)
+    plot_boxplot(no_valor, wi_valor, OUT_BOX_PDF)
 
-    combo_valor_files_no = {m: NO_HIST[m] for m in combo_models}
-    combo_valor_files_wi = {m: WI_HIST[m] for m in combo_models}
-    no_valor_3, _ = _collect_valor(combo_valor_files_no, "VALOR no-hist (3-model)")
-    wi_valor_3, _ = _collect_valor(combo_valor_files_wi, "VALOR w-hist  (3-model)")
-
-    plot_main(no_valor_3, wi_valor_3, no_mmhal, wi_mmhal, OUT_MAIN_PDF)
-    plot_boxplot(no_valor_5, wi_valor_5, OUT_BOX_PDF)
-
-    for label, rows in [("VALOR no-hist", no_valor_3),
-                        ("VALOR w-hist",  wi_valor_3),
-                        ("MMHal no-hist", no_mmhal),
-                        ("MMHal w-hist",  wi_mmhal)]:
+    for label, rows in [("VALOR no-hist", no_valor),
+                        ("VALOR w-hist",  wi_valor)]:
         agg = rate_by_qtype(rows)
         s = " | ".join(f"{qt}={agg[qt][0]*100:5.1f}% (n={agg[qt][1]})"
                         for qt in Q_TYPES)
