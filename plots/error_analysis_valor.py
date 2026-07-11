@@ -263,14 +263,16 @@ def plot_boxplot(no_rows, wi_rows, out_pdf):
                         linewidths=0)
     axL.set_xticks(x)
     axL.set_xticklabels([q.replace("-", "-\n") for q in Q_TYPES])
-    axL.set_ylabel("Hallucination rate (%)")
+    axL.set_ylabel(r"VALOR $1{-}$faith$_i$ (%)")
     axL.set_ylim(0, 100)
     axL.grid(axis="y", linestyle=":", alpha=0.4)
     axL.legend(frameon=False, loc="upper left", ncol=1,
                handlelength=1.0, labelspacing=0.2)
 
     fig.tight_layout()
-    fig.savefig(out_pdf, bbox_inches="tight")
+    # Very tight bbox so LaTeX doesn't render matplotlib's default figure
+    # padding as extra whitespace above the caption.
+    fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     print(f"[pdf] wrote {out_pdf}")
     plt.close(fig)
 
