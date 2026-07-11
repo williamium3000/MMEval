@@ -1,18 +1,24 @@
-"""VALOR variant of Fig 11, split into two PDFs.
+"""Per-turn hallucination plots derived from MMHal + VALOR.
 
-Per-turn signal = 1 - faithfulness_score_i for that turn (higher =
-more hallucination, matching the other Fig-11 variants).
+Panel (a): distribution of hallucinated turns by question type
+  (from VALOR unfaithful mentions on the no-history side).
+Panel (b): mean per-turn hallucination rate vs. conversation
+  progress, aggregating the two per-turn hallucination signals we
+  have (MMHal has_hallucination and VALOR 1-faith_i) so a single
+  metric's quirks don't dominate the curve.
+
+Sample: the 3 evaluatees for which both per-turn signals are
+available on v18/v18conv (InternVL2-8B, InternVL2.5-8B,
+gemma-3-12B). Qwen2.5-VL-7B and LLaVA-1.5-7B are omitted from
+this figure because their per-turn VALOR is only computed on the
+SVG pipeline.
 
 Two output PDFs:
-
-  fig/error_analysis_valor.pdf  ---  the examinee-behavior view for
-    the "hallucination as conversation progresses" subsection.  Two
-    panels: (a) hallucinated-turn share by q_type (pie), (b) rate vs
-    conversation progress.
-
-  fig/history_valor_boxplot.pdf ---  the by-q_type distribution
-    across evaluatees, meant to sit next to tab:history-ablation to
-    illustrate the effect of the conversation-history design.
+  fig/error_analysis_valor.pdf  ---  panels (a) + (b) for the
+    "hallucination as conversation progresses" subsection.
+  fig/history_valor_boxplot.pdf ---  standalone box plot of
+    VALOR 1-faith_i by question type, meant to sit next to
+    tab:history-ablation.
 """
 import json
 import os
@@ -40,8 +46,9 @@ N_BINS = 10
 
 # ---------- collectors ------------------------------------------------
 
-def _collect(files, label):
-    """files: {model_key: valor_pt_json_path}."""
+def _collect_valor(files, label):
+    """files: {model_key: valor_pt_json_path}.  Returns rows tagged with
+    signal = 1 - faithfulness_score_i per turn."""
     rows, used = [], []
     for m, p in files.items():
         if not os.path.isfile(p):
@@ -70,6 +77,47 @@ def _collect(files, label):
             rows.append((m, qt, r / mx, unfaith))
     print(f"[{label}] {len(used)} models, {len(rows)} per-turn records")
     return rows, used
+
+
+def _collect_mmhal(models, base_dir, label):
+    """models: {model_key: model_dir_name}, base_dir: the run root.
+    Returns rows with signal = 1.0 if has_hallucination else 0.0.
+    """
+    rows, used = [], []
+    for m, mdir in models.items():
+        cands = [
+            os.path.join(REPO, base_dir, mdir, f"mmhal_{mdir}.json"),
+            os.path.join(REPO, base_dir, f"{mdir}_extracted",
+                         f"mmhal_{mdir}_extracted.json"),
+        ]
+        p = next((c for c in cands if os.path.isfile(c)), None)
+        if not p:
+            print(f"  skip {m}: no mmhal file")
+            continue
+        d = json.load(open(p))
+        results = d.get("detailed_results", [])
+        if not results:
+            continue
+        used.append(m)
+        from collections import defaultdict
+        max_round = defaultdict(int)
+        for r in results:
+            max_round[r.get("record_index")] = max(
+                max_round[r.get("record_index")], int(r.get("round_id") or 0))
+        for r in results:
+            qt = r.get("q_type")
+            if qt not in Q_TYPES:
+                continue
+            rid = int(r.get("round_id") or 0)
+            mx = max_round[r.get("record_index")] or 1
+            h = 1.0 if r.get("has_hallucination") else 0.0
+            rows.append((m, qt, rid / mx, h))
+    print(f"[{label}] {len(used)} models, {len(rows)} per-turn records")
+    return rows, used
+
+
+# Retain the old name for the box plot (renamed above)
+_collect = _collect_valor
 
 
 def rate_by_progress_per_model(rows, n_bins=N_BINS):
@@ -129,18 +177,21 @@ SERIES_EDGE  = {"no history": "#2F6FCC", "with history": "#496F2C"}
 SERIES_MARK  = {"no history": "o",       "with history": "D"}
 
 
-def plot_main(no_rows, wi_rows, out_pdf):
-    """Two panels: (a) pie of hallucinated-turn share on no-hist,
-    (b) rate vs conversation progress for both series."""
+def plot_main(no_valor, wi_valor, no_mmhal, wi_mmhal, out_pdf):
+    """Two panels:
+    (a) pie of hallucinated-turn share by q_type (VALOR unfaithful on
+        no-history, since MMHal + VALOR share the same distribution
+        story).
+    (b) mean per-turn hallucination rate vs conversation progress,
+        averaging the two per-turn signals (MMHal has_hallucination
+        and VALOR 1-faith_i)."""
     fig, (axP, axR) = plt.subplots(
         1, 2, figsize=(7.5, 2.4),
         gridspec_kw={"width_ratios": [1, 2]},
     )
 
     counts = {qt: 0 for qt in Q_TYPES}
-    # threshold-free proxy: turn contributes to "hallucinated" count if
-    # any generated object was unfaithful (unfaith > 0).
-    for (_m, q, _p, h) in no_rows:
+    for (_m, q, _p, h) in no_valor:
         if h > 0 and q in counts:
             counts[q] += 1
     slices, _, autotexts = axP.pie(
@@ -158,15 +209,20 @@ def plot_main(no_rows, wi_rows, out_pdf):
         t.set_fontsize(6.5)
     axP.set_title("(a) Hallucination count by question type")
 
-    for label, rows in [("no history", no_rows), ("with history", wi_rows)]:
-        centers, rates = rate_by_progress_per_model(rows)
-        axR.plot(centers * 100, rates * 100,
+    for label, valor_rows, mmhal_rows in [
+        ("no history",   no_valor, no_mmhal),
+        ("with history", wi_valor, wi_mmhal),
+    ]:
+        centers, rate_v = rate_by_progress_per_model(valor_rows)
+        _,       rate_m = rate_by_progress_per_model(mmhal_rows)
+        combined = (rate_v + rate_m) / 2
+        axR.plot(centers * 100, combined * 100,
                  marker=SERIES_MARK[label], color=SERIES_EDGE[label],
                  markerfacecolor=SERIES_COLOR[label],
                  markersize=4.0, linewidth=1.6, label=label,
                  markeredgewidth=0.7)
     axR.set_xlabel("Conversation progress (%)")
-    axR.set_ylabel("Hallucination rate (%)")
+    axR.set_ylabel("Per-turn hallucination rate (%)")
     axR.set_title("(b) Hallucination as conversation progresses")
     axR.set_xlim(0, 100)
     axR.grid(linestyle=":", alpha=0.4)
@@ -228,18 +284,41 @@ def plot_boxplot(no_rows, wi_rows, out_pdf):
 
 
 def main():
-    no, no_m = _collect(NO_HIST, "VALOR no-hist")
-    wi, wi_m = _collect(WI_HIST, "VALOR w-hist")
-    if not no or not wi:
-        print("no data")
-        return
-    plot_main(no, wi, OUT_MAIN_PDF)
-    plot_boxplot(no, wi, OUT_BOX_PDF)
-    for label, rows in [("no history", no), ("with history", wi)]:
+    # 5-model VALOR data (box plot uses full 5-model set on the paired
+    # sources that already have per-turn VALOR outputs)
+    no_valor_5, _ = _collect_valor(NO_HIST, "VALOR no-hist (5-model)")
+    wi_valor_5, _ = _collect_valor(WI_HIST, "VALOR w-hist  (5-model)")
+
+    # Combined-metric panel needs same source for both metrics per model.
+    # MMHal is per-turn on v18/v18conv for all 5 models, but per-turn
+    # VALOR on v18/v18conv only exists for the 3 non-SVG evaluatees.
+    # Intersect.
+    combo_models = {
+        "InternVL2-8B":     "InternVL2-8B",
+        "InternVL2_5-8B":   "InternVL2_5-8B",
+        "gemma-3-12b-it":   "gemma-3-12b-it",
+    }
+    v18_root  = "work_dirs/vg/final_run_v18_gpt4o_completed"
+    conv_root = "work_dirs/vg/final_run_v18_gpt4o_conv_completed"
+    no_mmhal, _ = _collect_mmhal(combo_models, v18_root,  "MMHal no-hist")
+    wi_mmhal, _ = _collect_mmhal(combo_models, conv_root, "MMHal w-hist")
+
+    combo_valor_files_no = {m: NO_HIST[m] for m in combo_models}
+    combo_valor_files_wi = {m: WI_HIST[m] for m in combo_models}
+    no_valor_3, _ = _collect_valor(combo_valor_files_no, "VALOR no-hist (3-model)")
+    wi_valor_3, _ = _collect_valor(combo_valor_files_wi, "VALOR w-hist  (3-model)")
+
+    plot_main(no_valor_3, wi_valor_3, no_mmhal, wi_mmhal, OUT_MAIN_PDF)
+    plot_boxplot(no_valor_5, wi_valor_5, OUT_BOX_PDF)
+
+    for label, rows in [("VALOR no-hist", no_valor_3),
+                        ("VALOR w-hist",  wi_valor_3),
+                        ("MMHal no-hist", no_mmhal),
+                        ("MMHal w-hist",  wi_mmhal)]:
         agg = rate_by_qtype(rows)
         s = " | ".join(f"{qt}={agg[qt][0]*100:5.1f}% (n={agg[qt][1]})"
                         for qt in Q_TYPES)
-        print(f"  {label:14s}  {s}")
+        print(f"  {label:16s}  {s}")
 
 
 if __name__ == "__main__":
