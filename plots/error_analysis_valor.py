@@ -173,9 +173,9 @@ PIE_COLORS = {"regular": "#D5E4F4", "follow-up": "#E4F0E0",
               "adversarial": "#F0D0C8", "unanswerable": "#F6E4B8"}
 PIE_EDGE   = {"regular": "#2F6FCC", "follow-up": "#496F2C",
               "adversarial": "#B87474", "unanswerable": "#B08830"}
-SERIES_COLOR = {"no history": "#D5E4F4", "with history": "#E4F0E0"}
-SERIES_EDGE  = {"no history": "#2F6FCC", "with history": "#496F2C"}
-SERIES_MARK  = {"no history": "o",       "with history": "D"}
+SERIES_COLOR = {"w/o hist": "#D5E4F4", "w/ hist": "#E4F0E0"}
+SERIES_EDGE  = {"w/o hist": "#2F6FCC", "w/ hist": "#496F2C"}
+SERIES_MARK  = {"w/o hist": "o",       "w/ hist": "D"}
 
 
 def plot_pie(no_rows, out_pdf):
@@ -187,7 +187,7 @@ def plot_pie(no_rows, out_pdf):
             counts[q] += 1
     slices, _, autotexts = axP.pie(
         [counts[qt] for qt in Q_TYPES],
-        labels=[qt.replace("-", "-\n") for qt in Q_TYPES],
+        labels=list(Q_TYPES),
         colors=[PIE_COLORS[qt] for qt in Q_TYPES],
         wedgeprops=dict(edgecolor="white", linewidth=1.0),
         autopct="%1.0f%%", pctdistance=0.68,
@@ -208,7 +208,7 @@ def plot_line(no_rows, wi_rows, out_pdf):
     """Standalone line plot: mean per-turn VALOR 1-faith_i rate vs
     conversation progress. Per-model equal-weight averaging."""
     fig, axR = plt.subplots(figsize=(4.6, 2.4))
-    for label, rows in [("no history", no_rows), ("with history", wi_rows)]:
+    for label, rows in [("w/o hist", no_rows), ("w/ hist", wi_rows)]:
         centers, rates = rate_by_progress_per_model(rows)
         axR.plot(centers * 100, rates * 100,
                  marker=SERIES_MARK[label], color=SERIES_EDGE[label],
@@ -232,12 +232,12 @@ def plot_boxplot(no_rows, wi_rows, out_pdf):
     Taller-and-thinner than the standard 3-panel version so it fits
     next to a tall-thin table."""
     fig, axL = plt.subplots(figsize=(4.4, 3.0))
-    box_data = {"no history":   per_model_rates_by_qtype(no_rows),
-                "with history": per_model_rates_by_qtype(wi_rows)}
+    box_data = {"w/o hist":   per_model_rates_by_qtype(no_rows),
+                "w/ hist": per_model_rates_by_qtype(wi_rows)}
     x = np.arange(len(Q_TYPES))
     w = 0.34
     offsets = np.array([-w / 2, w / 2])
-    for (label, off) in zip(["no history", "with history"], offsets):
+    for (label, off) in zip(["w/o hist", "w/ hist"], offsets):
         positions = x + off
         data = [[v * 100 for v in box_data[label][qt]] for qt in Q_TYPES]
         axL.boxplot(
