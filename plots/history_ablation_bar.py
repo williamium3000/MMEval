@@ -42,7 +42,9 @@ def main():
     labels = [m[0] for m in METRICS]
     ratios = [wi / wo for (_l, wo, wi) in METRICS]
 
-    fig, ax = plt.subplots(figsize=(3.8, 3.0))
+    # aspect chosen so that at 0.44\linewidth the rendered height matches
+    # the boxplot next to it (0.8*0.5\linewidth wide, 4.4x3.0 figsize)
+    fig, ax = plt.subplots(figsize=(4.4, 2.73))
     y = np.arange(len(METRICS))[::-1]
     ax.barh(y, ratios, height=0.62, color=BAR_FACE,
             edgecolor=BAR_EDGE, linewidth=0.9, zorder=3)
